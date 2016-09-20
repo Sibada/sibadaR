@@ -2,18 +2,18 @@
 % Please edit documentation in R/sibadaR.R
 \name{MK_test}
 \alias{MK_test}
-\title{Mann-Kendall趋势分析}
+\title{Mann-Kendall trend test}
 \usage{
 MK_test(x)
 }
 \arguments{
-\item{x}{待分析的时间序列，可以是数据框或者是矩阵形式}
+\item{x}{A time series (vector or matrix) to be test.}
 }
 \value{
-如果x为单个序列就返回一个列表，其中MK.value为M-K统计值，p.value为显著性达到了多少置信度。
-        如果x是个数据框或者矩阵就挨列计算，返回一个矩阵记录每一列的MK.value和p.value。
+A list include M-K static value(MK.value) and significance value(p.value)
+        if x is a vector, or a matrix to record MK.value and p.value for each column of x.
 }
 \description{
-Mann-Kendall趋势分析
+Mann-Kendall trend test
 }
 

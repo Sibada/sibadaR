@@ -7,7 +7,7 @@
 \alias{apply.spring}
 \alias{apply.summer}
 \alias{apply.winter}
-\title{对xts时间序列按季节（如按春夏秋冬或者全部季节）应用函数。}
+\title{Apply function over seasons for xts object.}
 \usage{
 apply.seasonally(x, FUN, ...)
 
@@ -20,14 +20,18 @@ apply.autumn(x, FUN, ...)
 apply.winter(x, FUN, ...)
 }
 \arguments{
-\item{x}{xts时间序列}
+\item{x}{An xts time-series object}
 
-\item{FUN}{某R函数}
+\item{FUN}{An R function}
+
+\item{...}{Additional arguments to FUN.}
 }
 \value{
-对该时间序列按季节应用FUN产生的结果
+The result of the R function apply to the xts object.
 }
 \description{
-按3~5月为春季，6～8月为夏季，9~11月为秋季，12～次年2月为冬季的方法算。
+The seasons is conclute as that March, April and May as spring,
+             June, July and August as summer, September, October and November
+             as autumn, December and January, Feburary of next year as winter.
 }
 

@@ -76,11 +76,11 @@ season.apply <- function(x, INDEX, FUN, ...)
 
 ####################################################
 
-#' Mann-Kendall趋势分析
+#' Mann-Kendall trend test
 #'
-#' @param x 待分析的时间序列，可以是数据框或者是矩阵形式
-#' @return 如果x为单个序列就返回一个列表，其中MK.value为M-K统计值，p.value为显著性达到了多少置信度。
-#'         如果x是个数据框或者矩阵就挨列计算，返回一个矩阵记录每一列的MK.value和p.value。
+#' @param x A time series (vector or matrix) to be test.
+#' @return A list include M-K static value(MK.value) and significance value(p.value)
+#'         if x is a vector, or a matrix to record MK.value and p.value for each column of x.
 #'
 #' @export
 MK_test <- function (x) {
@@ -92,13 +92,16 @@ MK_test <- function (x) {
 }
 
 
-#' 对xts时间序列按季节（如按春夏秋冬或者全部季节）应用函数。
+#' Apply function over seasons for xts object.
 #'
-#' @description 按3~5月为春季，6～8月为夏季，9~11月为秋季，12～次年2月为冬季的方法算。
-#' @param x xts时间序列
-#' @param FUN 某R函数
+#' @description The seasons is conclute as that March, April and May as spring,
+#'              June, July and August as summer, September, October and November
+#'              as autumn, December and January, Feburary of next year as winter.
+#' @param x An xts time-series object
+#' @param FUN An R function
+#' @param ... Additional arguments to FUN.
 #'
-#' @return 对该时间序列按季节应用FUN产生的结果
+#' @return The result of the R function apply to the xts object.
 #'
 #' @name apply.season
 #' @export
@@ -145,4 +148,23 @@ apply.autumn <- function(x, FUN, ...) {
 apply.winter <- function(x, FUN, ...) {
   ep <- endpoints.seasons(x, "winter")
   season.apply(x, ep, FUN, ...)
+}
+
+
+#' Some template of ggplot2 theme may be offten used.
+#'
+#' @description Just as title.
+#'
+#' @return A ggplot2 theme.
+#'
+#' @name mytheme
+#' @export
+blank.theme <- function() {
+  th <- theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(),
+              panel.background = element_blank(),
+              panel.border = element_rect(color = 'black', fill = NA, size = 0.5),
+              strip.background = element_blank(), axis.line = element_blank(),
+              axis.text = element_text(color = 'black'),
+              text = element_text(color='black'))
+  th
 }
