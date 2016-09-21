@@ -168,3 +168,113 @@ blank.theme <- function() {
               text = element_text(color='black'))
   th
 }
+
+#' Quickly create a date sequence
+#'
+#' @description  Quickly create a date sequence without write a mountain of
+#'               "as.Date" and write the long argument "length.out = ".
+#' @param from A string of the initiate date, "1949", "1949-01", "1949-01-01",
+#'             "1949/01", "1949/01/01", "1949.01", "1949.01.01" are acceptabel.
+#' @param to A string of the end date, format is as same as from.
+#' @param len The length of the sequence.
+#'
+#' @return A date sequence.
+#'
+#' @name seq.date
+#' @export
+seq_day <- function(from, to = NULL, len = NULL) {
+  ncfrom <- length(strsplit(from, "[-./\\s]")[[1]])
+  from <- sub("[./\\s]","-",from)
+  if(ncfrom == 2) {
+    from <- paste(from, "01", sep = "-")
+  }else if(ncfrom == 1) {
+    from <- paste(from, "01", "01", sep = "-")
+  }else if(ncfrom == 0 | ncfrom > 3)
+    stop('Error: fromat of "from" incorrect.')
+
+  if(!is.null(to)) {
+    ncto <- length(strsplit(to, "[-./\\s]")[[1]])
+    to <- sub("[./\\s]","-",to)
+    if(ncto == 2) {
+      to <- paste(to, "01", sep = "-")
+    }else if(ncto == 1) {
+      to <- paste(to, "01", "01", sep = "-")
+    }else if(ncto == 0 | to > 3)
+      stop('Error: fromat of "to" incorrect.')
+
+    sq <- seq(from = as.Date(from), to = as.Date(to), by = 'day')
+
+  }else if(!is.null(len)){
+    sq <- seq(from = as.Date(from), length.out = len, by = 'day')
+
+  }else{
+    stop("Error: to and len shouldn't be NULL at same time.")
+  }
+  sq
+}
+
+#' @rdname seq.date
+#' @export
+seq_month <- function(from, to = NULL, len = NULL) {
+  ncfrom <- length(strsplit(from, "[-./\\s]")[[1]])
+  from <- sub("[./\\s]","-",from)
+  if(ncfrom == 2) {
+    from <- paste(from, "12", sep = "-")
+  }else if(ncfrom == 1) {
+    from <- paste(from, "12", "01", sep = "-")
+  }else if(ncfrom == 0 | ncfrom > 3)
+    stop('Error: fromat of "from" incorrect.')
+
+  if(!is.null(to)) {
+    ncto <- length(strsplit(to, "[-./\\s]")[[1]])
+    to <- sub("[./\\s]","-",to)
+    if(ncto == 2) {
+      to <- paste(to, "12", sep = "-")
+    }else if(ncto == 1) {
+      to <- paste(to, "12", "01", sep = "-")
+    }else if(ncto == 0 | to > 3)
+      stop('Error: fromat of "to" incorrect.')
+
+    sq <- seq(from = as.Date(from), to = as.Date(to), by = 'month')
+
+  }else if(!is.null(len)){
+    sq <- seq(from = as.Date(from), length.out = len, by = 'month')
+
+  }else{
+    stop("Error: to and len shouldn't be NULL at same time.")
+  }
+  sq
+}
+
+#' @rdname seq.date
+#' @export
+seq_year <- function(from, to = NULL, len = NULL) {
+  ncfrom <- length(strsplit(from, "[-./\\s]")[[1]])
+  from <- sub("[./\\s]","-",from)
+  if(ncfrom == 2) {
+    from <- paste(from, "01", sep = "-")
+  }else if(ncfrom == 1) {
+    from <- paste(from, "01", "01", sep = "-")
+  }else if(ncfrom == 0 | ncfrom > 3)
+    stop('Error: fromat of "from" incorrect.')
+
+  if(!is.null(to)) {
+    ncto <- length(strsplit(to, "[-./\\s]")[[1]])
+    to <- sub("[./\\s]","-",to)
+    if(ncto == 2) {
+      to <- paste(to, "01", sep = "-")
+    }else if(ncto == 1) {
+      to <- paste(to, "01", "01", sep = "-")
+    }else if(ncto == 0 | to > 3)
+      stop('Error: fromat of "to" incorrect.')
+
+    sq <- seq(from = as.Date(from), to = as.Date(to), by = 'year')
+
+  }else if(!is.null(len)){
+    sq <- seq(from = as.Date(from), length.out = len, by = 'year')
+
+  }else{
+    stop("Error: to and len shouldn't be NULL at same time.")
+  }
+  sq
+}
