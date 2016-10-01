@@ -19,7 +19,8 @@ License: GPL-3
 LazyData: TRUE
 Imports:
     ggplot2,
-    xts
+    xts,
+    reshape2
 URL: https://github.com/Sibada/sibadaR
 BugReports: https://github.com/Sibada/sibadaR/issues
 RoxygenNote: 5.0.1

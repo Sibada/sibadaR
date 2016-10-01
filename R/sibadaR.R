@@ -19,6 +19,19 @@ mk <- function (x) {
   c(MK.value = MK.value, p.value = p.value)
 }
 
+mk_U <- function(x) {
+  n <- length(x)
+  r <- s <- 0
+  for(i in 2:n){
+    r[i] <- length((1:i)[x[1:i] < x[i]])
+    s[i] <- s[i-1] + r[i]
+  }
+  k <- 1:n
+  U <- (s - k*(k+1)/4) / sqrt(k*(k-1)*(2*k+5)/72)
+  U[1] <- 0
+  return(U)
+}
+
 endpoints.seasons <- function(x, on = "spring") {
   if (timeBased(x)) {
     NR <- length(x)
@@ -277,4 +290,111 @@ sq.year <- function(from, to = NULL, len = NULL) {
     stop("Error: to and len shouldn't be NULL at same time.")
   }
   sq
+}
+
+#' Mann-Kendall mutation test
+#' @description Make Mann-Kendall mutation test and draw plot. Where the UF and UB curve cross means a mutation may be happen.
+#' @param x A single time series (can be xts object) to do that test.
+#' If x has multi column, it will only choose the first column to do that test.
+#' @param plot TRUE or FALSE. If it will draw a plot.
+#' @param out.value TRUE or FALSE. If it return the UF and UB value series or plot.
+#' @param index Index for x axis of plot.
+#' @param p.size
+#' @param l.size Point and line size of plot.
+#' @return Plot or values of UF and UB series from M-K mutation test.
+#' @export
+mk_mut_test <- function(x, plot = TRUE, out.value = FALSE, index=NULL, p.size=3, l.size=0.6) {
+  if(!is.null(dim(x)) && ncol(x) > 1){
+    x <- x[ , 1]
+    warning("x is not a single series, and now only use the first column.")
+  }
+  n <- length(x)
+  isxts <- FALSE
+  if(is.xts(x)){
+    t.ind <- index(x)
+    x <- as.numeric(x)
+    isxts <- TRUE
+  }
+
+  if(!is.null(index)){
+    ind <- index
+  }else if(isxts){
+    ind <- t.ind
+  }else ind <- 1:n
+
+  UF <- mk_U(x)
+  UB <- mk_U(rev(x))
+  UB <- -rev(UB)
+
+  mut.result <- data.frame(UF, UB)
+  if(isxts) mut.result <- xts(mut.result, t.ind)
+
+  if(!plot & out.value) {
+    return(mut.result)
+  }
+
+  conf.bound <- c(0)
+  if(max(mut.result) > 1.5) conf.bound <- append(blef.bond, 1.645)
+  if(min(mut.result) < -1.5) conf.bound <- append(blef.bond, -1.645)
+  if(max(mut.result) > 1.85) conf.bound <- append(blef.bond, 1.96)
+  if(min(mut.result) < -1.85) conf.bound <- append(blef.bond, -1.96)
+
+    mut.melt <- melt(data.frame(mut.result))
+    mut.melt$index <- ind
+
+  mut.plot <- ggplot(data=mut.melt, aes(x=index, y=value, group=variable)) +
+    geom_line(aes(linetype=variable), size=l.size) +
+    geom_point(aes(shape=variable), size=p.size) +
+    geom_hline(yintercept = conf.bound, linetype=3) +
+    geom_hline(yintercept = 0) +
+    ylab("M-K statistic") +
+    theme(axis.title.x=element_blank(), legend.title=element_blank())
+
+  if(plot & out.value){
+    plot(mkm.plot)
+    return(mut.result)
+  }else  return(mut.plot)
+}
+
+#' Quickly get point shapes.
+#' @description Quickly get what shapes of the point shapes look like in
+#' ggplot2.
+#' @return A chart showing point shapes with its ID.
+#' @export
+point_shapes <- function(size=7) {
+  xy <- merge(1:5, 1:6)[1:26, ]
+  xy$s <- (xy$y-1)*5 + xy$x - 1
+  p <- ggplot(data=xy,aes(x=x,y=y))+geom_text(aes(label=s),vjust=2.6, size=5) + scale_y_reverse(limits=c(6.5,1))
+  p <- p +
+    # To the begin I had ever try to use loop to make that, however I got a shit.
+    # Maybe Hadley hate loop. Finally I use Excel to generate those below.
+    geom_point(inherit.aes=F, aes(x=1, y=1), shape=0, size=size)+
+    geom_point(inherit.aes=F, aes(x=2, y=1), shape=1, size=size)+
+    geom_point(inherit.aes=F, aes(x=3, y=1), shape=2, size=size)+
+    geom_point(inherit.aes=F, aes(x=4, y=1), shape=3, size=size)+
+    geom_point(inherit.aes=F, aes(x=5, y=1), shape=4, size=size)+
+    geom_point(inherit.aes=F, aes(x=1, y=2), shape=5, size=size)+
+    geom_point(inherit.aes=F, aes(x=2, y=2), shape=6, size=size)+
+    geom_point(inherit.aes=F, aes(x=3, y=2), shape=7, size=size)+
+    geom_point(inherit.aes=F, aes(x=4, y=2), shape=8, size=size)+
+    geom_point(inherit.aes=F, aes(x=5, y=2), shape=9, size=size)+
+    geom_point(inherit.aes=F, aes(x=1, y=3), shape=10, size=size)+
+    geom_point(inherit.aes=F, aes(x=2, y=3), shape=11, size=size)+
+    geom_point(inherit.aes=F, aes(x=3, y=3), shape=12, size=size)+
+    geom_point(inherit.aes=F, aes(x=4, y=3), shape=13, size=size)+
+    geom_point(inherit.aes=F, aes(x=5, y=3), shape=14, size=size)+
+    geom_point(inherit.aes=F, aes(x=1, y=4), shape=15, size=size)+
+    geom_point(inherit.aes=F, aes(x=2, y=4), shape=16, size=size)+
+    geom_point(inherit.aes=F, aes(x=3, y=4), shape=17, size=size)+
+    geom_point(inherit.aes=F, aes(x=4, y=4), shape=18, size=size)+
+    geom_point(inherit.aes=F, aes(x=5, y=4), shape=19, size=size)+
+    geom_point(inherit.aes=F, aes(x=1, y=5), shape=20, size=size)+
+    geom_point(inherit.aes=F, aes(x=2, y=5), shape=21, size=size)+
+    geom_point(inherit.aes=F, aes(x=3, y=5), shape=22, size=size)+
+    geom_point(inherit.aes=F, aes(x=4, y=5), shape=23, size=size)+
+    geom_point(inherit.aes=F, aes(x=5, y=5), shape=24, size=size)+
+    geom_point(inherit.aes=F, aes(x=1, y=6), shape=25, size=size)+
+    geom_point(inherit.aes=F, aes(x=2, y=6), shape=26, size=size)
+  p <- p + theme(axis.title=element_blank(), axis.text=element_blank(), axis.ticks=element_blank())
+  return(p)
 }
