@@ -359,9 +359,10 @@ mk_mut_test <- function(x, plot = TRUE, out.value = FALSE, index=NULL, p.size=3,
 #' Quickly get point shapes.
 #' @description Quickly get what shapes of the point shapes look like in
 #' ggplot2.
+#' @param Size parameter of points.
 #' @return A chart showing point shapes with its ID.
-#' @export
-point_shapes <- function(size=7) {
+#' @exportB
+show_pointshapes <- function(size=7) {
   xy <- merge(1:5, 1:6)[1:26, ]
   xy$s <- (xy$y-1)*5 + xy$x - 1
   p <- ggplot(data=xy,aes(x=x,y=y))+geom_text(aes(label=s),vjust=2.6, size=5) + scale_y_reverse(limits=c(6.5,1))
@@ -397,4 +398,18 @@ point_shapes <- function(size=7) {
     geom_point(inherit.aes=F, aes(x=2, y=6), shape=26, size=size)
   p <- p + theme(axis.title=element_blank(), axis.text=element_blank(), axis.ticks=element_blank())
   return(p)
+}
+
+#' Quickly get line types.
+#' @description Quickly get what line types look like in ggplot2.
+#' @return A chart showing line types with its ID.
+#' @param size Size parameter of lines.
+#' @export
+shwo_linetypes <- function(size=0.5) {
+  g <- ggplot()
+  for(i in 1:6) g <- g + geom_hline(yintercept = i, linetype = i,size = size)
+  g <- g + scale_y_reverse(breaks = 6:1) +
+    theme(axis.title = element_blank(), axis.text = element_text(size = 15),
+          axis.ticks = element_blank())
+  plot(g)
 }
