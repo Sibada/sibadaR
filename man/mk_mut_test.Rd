@@ -17,7 +17,9 @@ If x has multi column, it will only choose the first column to do that test.}
 
 \item{index}{Index for x axis of plot.}
 
-\item{l.size}{Point and line size of plot.}
+\item{p.size}{Point  size of plot.}
+
+\item{l.size}{Line size of plot.}
 }
 \value{
 Plot or values of UF and UB series from M-K mutation test.

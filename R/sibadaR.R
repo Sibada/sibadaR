@@ -299,8 +299,8 @@ sq.year <- function(from, to = NULL, len = NULL) {
 #' @param plot TRUE or FALSE. If it will draw a plot.
 #' @param out.value TRUE or FALSE. If it return the UF and UB value series or plot.
 #' @param index Index for x axis of plot.
-#' @param p.size
-#' @param l.size Point and line size of plot.
+#' @param p.size Point  size of plot.
+#' @param l.size Line size of plot.
 #' @return Plot or values of UF and UB series from M-K mutation test.
 #' @export
 mk_mut_test <- function(x, plot = TRUE, out.value = FALSE, index=NULL, p.size=3, l.size=0.6) {
@@ -356,13 +356,13 @@ mk_mut_test <- function(x, plot = TRUE, out.value = FALSE, index=NULL, p.size=3,
   }else  return(mut.plot)
 }
 
-#' Quickly get point shapes.
+#' Quickly get point shapes of ggplot2.
 #' @description Quickly get what shapes of the point shapes look like in
 #' ggplot2.
 #' @param Size parameter of points.
 #' @return A chart showing point shapes with its ID.
-#' @exportB
-show_pointshapes <- function(size=7) {
+#' @export
+gg_pointshapes <- function(size=7) {
   xy <- merge(1:5, 1:6)[1:26, ]
   xy$s <- (xy$y-1)*5 + xy$x - 1
   p <- ggplot(data=xy,aes(x=x,y=y))+geom_text(aes(label=s),vjust=2.6, size=5) + scale_y_reverse(limits=c(6.5,1))
@@ -400,16 +400,34 @@ show_pointshapes <- function(size=7) {
   return(p)
 }
 
-#' Quickly get line types.
+#' Quickly get line types of ggplot2.
 #' @description Quickly get what line types look like in ggplot2.
 #' @return A chart showing line types with its ID.
 #' @param size Size parameter of lines.
 #' @export
-shwo_linetypes <- function(size=0.5) {
+gg_linetypes <- function(size=0.5) {
   g <- ggplot()
   for(i in 1:6) g <- g + geom_hline(yintercept = i, linetype = i,size = size)
   g <- g + scale_y_reverse(breaks = 6:1) +
     theme(axis.title = element_blank(), axis.text = element_text(size = 15),
           axis.ticks = element_blank())
   plot(g)
+}
+
+
+#' Quickly get point shapes of base plot.
+#' @description Quickly get what shapes of the point shapes look like in
+#' base plot function.
+#' @return A chart showing point shapes with its ID.
+#' @export
+p_pointshapes <- function() {
+  xy <- merge(1:5, 1:5)
+  s <- 1:25
+  ps <- data.frame(xy,s)
+  names(ps) = c("x", "y", "s")
+  plot(x = c(), xlim = c(0.5,5.5), ylim = c(0.5,5.5), xlab = "", ylab = "", asp = 1)
+  for(i in 1:25) {
+    points(ps$x[i], ps$y[i], pch = ps$s[i], cex = 2)
+    text(ps$x[i] + 0.1, ps$y[i] - 0.3, labels = ps$s[i])
+  }
 }
