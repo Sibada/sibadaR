@@ -424,10 +424,23 @@ p_pointshapes <- function() {
   xy <- merge(1:5, 1:5)
   s <- 1:25
   ps <- data.frame(xy,s)
-  names(ps) = c("x", "y", "s")
-  plot(x = c(), xlim = c(0.5,5.5), ylim = c(0.5,5.5), xlab = "", ylab = "", asp = 1)
+  names(ps)  <-  c("x", "y", "s")
+  plot(x = c(), xlim = c(0.5,5.5), ylim = c(0.5,5.5), xlab = "type: pch, size: cex", ylab = "", asp = 1)
   for(i in 1:25) {
     points(ps$x[i], ps$y[i], pch = ps$s[i], cex = 2)
     text(ps$x[i] + 0.1, ps$y[i] - 0.3, labels = ps$s[i])
+  }
+}
+
+
+#' Quickly get line types of base plot.
+#' @description Quickly get what the line types look like in
+#' base plot function.
+#' @return A chart showing line types with its ID.
+#' @export
+p_linetypes <- function() {
+  plot(x = c(), xlim =c(-1, 1), ylim = c(0.5,6.5), xlab = "type: lty, size: lwd", ylab = "")
+  for(lt in 1:6) {
+    lines(c(-1, 1), c(lt, lt), lty = lt, lwd = 2)
   }
 }
