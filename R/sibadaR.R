@@ -444,3 +444,35 @@ p_linetypes <- function() {
     lines(c(-1, 1), c(lt, lt), lty = lt, lwd = 2)
   }
 }
+
+#' Root mean square error
+#' @description Calculate root mean square error of two data series.
+#' @param sim Simulated data series or data to be evaluated.
+#' @param obs Observed data series or data as reference.
+#' @return Root mean square error of sim and obs series.
+#' @export
+RMSE <- function(sim, obs) {
+  return(sqrt(mean((sim - obs)**2)))
+}
+
+
+#' Normailzed mean square error
+#' @description Calculate normailzed mean square error of two data series.
+#' @param sim Simulated data series or data to be evaluated.
+#' @param obs Observed data series or data as reference.
+#' @return Normailzed mean square error of sim and obs series.
+#' @export
+NMSE <- function(sim, obs) {
+  return(mean((obs - sim)**2) / var(obs))
+}
+
+
+#' Nash-Sutcliffe coefficient of efficiency
+#' @description Calculate Nash-Sutcliffe coefficient of efficiency of two data series.
+#' @param sim Simulated data series or data to be evaluated.
+#' @param obs Observed data series or data as reference.
+#' @return Nash-Sutcliffe coefficient of efficiency of sim and obs series.
+#' @export
+NSCE <- function(sim, obs) {
+  return(1 - NMSE(sim, obs))
+}
