@@ -209,9 +209,11 @@ sq.day <- function(from, to = NULL, len = NULL) {
     ncto <- length(strsplit(to, "[-./\\s]")[[1]])
     to <- sub("[./\\s]","-",to)
     if(ncto == 2) {
-      to <- paste(to, "01", sep = "-")
+      tmp <- as.Date(paste(to, "01", sep = "-"))
+      total_days <- days_in_month(tmp)
+      to <- paste(to, total_days, sep = "-")
     }else if(ncto == 1) {
-      to <- paste(to, "01", "01", sep = "-")
+      to <- paste(to, "12", "31", sep = "-")
     }else if(ncto == 0 | to > 3)
       stop('Error: fromat of "to" incorrect.')
 
@@ -242,7 +244,7 @@ sq.month <- function(from, to = NULL, len = NULL) {
     ncto <- length(strsplit(to, "[-./\\s]")[[1]])
     to <- sub("[./\\s]","-",to)
     if(ncto == 2) {
-      to <- paste(to, "12", sep = "-")
+      to <- paste(to, "01", sep = "-")
     }else if(ncto == 1) {
       to <- paste(to, "12", "01", sep = "-")
     }else if(ncto == 0 | to > 3)
@@ -365,36 +367,38 @@ mk_mut_test <- function(x, plot = TRUE, out.value = FALSE, index=NULL, p.size=3,
 gg_pointshapes <- function(size=7) {
   xy <- merge(1:5, 1:6)[1:26, ]
   xy$s <- (xy$y-1)*5 + xy$x - 1
-  p <- ggplot(data=xy,aes(x=x,y=y))+geom_text(aes(label=s),vjust=2.6, size=5) + scale_y_reverse(limits=c(6.5,1))
+  p <- ggplot(data=xy,aes(x=x,y=y)) +
+    geom_text(aes(label=s),vjust=2.6, size=5) +
+    scale_y_reverse(limits=c(6.5,1))
   p <- p +
-    # To the begin I had ever try to use loop to make that, however I got a shit.
+    # At first I had ever try to use loop to make that but I got a shit in the end.
     # Maybe Hadley hate loop. Finally I use Excel to generate those below.
-    geom_point(inherit.aes=F, aes(x=1, y=1), shape=0, size=size)+
-    geom_point(inherit.aes=F, aes(x=2, y=1), shape=1, size=size)+
-    geom_point(inherit.aes=F, aes(x=3, y=1), shape=2, size=size)+
-    geom_point(inherit.aes=F, aes(x=4, y=1), shape=3, size=size)+
-    geom_point(inherit.aes=F, aes(x=5, y=1), shape=4, size=size)+
-    geom_point(inherit.aes=F, aes(x=1, y=2), shape=5, size=size)+
-    geom_point(inherit.aes=F, aes(x=2, y=2), shape=6, size=size)+
-    geom_point(inherit.aes=F, aes(x=3, y=2), shape=7, size=size)+
-    geom_point(inherit.aes=F, aes(x=4, y=2), shape=8, size=size)+
-    geom_point(inherit.aes=F, aes(x=5, y=2), shape=9, size=size)+
-    geom_point(inherit.aes=F, aes(x=1, y=3), shape=10, size=size)+
-    geom_point(inherit.aes=F, aes(x=2, y=3), shape=11, size=size)+
-    geom_point(inherit.aes=F, aes(x=3, y=3), shape=12, size=size)+
-    geom_point(inherit.aes=F, aes(x=4, y=3), shape=13, size=size)+
-    geom_point(inherit.aes=F, aes(x=5, y=3), shape=14, size=size)+
-    geom_point(inherit.aes=F, aes(x=1, y=4), shape=15, size=size)+
-    geom_point(inherit.aes=F, aes(x=2, y=4), shape=16, size=size)+
-    geom_point(inherit.aes=F, aes(x=3, y=4), shape=17, size=size)+
-    geom_point(inherit.aes=F, aes(x=4, y=4), shape=18, size=size)+
-    geom_point(inherit.aes=F, aes(x=5, y=4), shape=19, size=size)+
-    geom_point(inherit.aes=F, aes(x=1, y=5), shape=20, size=size)+
-    geom_point(inherit.aes=F, aes(x=2, y=5), shape=21, size=size)+
-    geom_point(inherit.aes=F, aes(x=3, y=5), shape=22, size=size)+
-    geom_point(inherit.aes=F, aes(x=4, y=5), shape=23, size=size)+
-    geom_point(inherit.aes=F, aes(x=5, y=5), shape=24, size=size)+
-    geom_point(inherit.aes=F, aes(x=1, y=6), shape=25, size=size)+
+    geom_point(inherit.aes=F, aes(x=1, y=1), shape=0, size=size) +
+    geom_point(inherit.aes=F, aes(x=2, y=1), shape=1, size=size) +
+    geom_point(inherit.aes=F, aes(x=3, y=1), shape=2, size=size) +
+    geom_point(inherit.aes=F, aes(x=4, y=1), shape=3, size=size) +
+    geom_point(inherit.aes=F, aes(x=5, y=1), shape=4, size=size) +
+    geom_point(inherit.aes=F, aes(x=1, y=2), shape=5, size=size) +
+    geom_point(inherit.aes=F, aes(x=2, y=2), shape=6, size=size) +
+    geom_point(inherit.aes=F, aes(x=3, y=2), shape=7, size=size) +
+    geom_point(inherit.aes=F, aes(x=4, y=2), shape=8, size=size) +
+    geom_point(inherit.aes=F, aes(x=5, y=2), shape=9, size=size) +
+    geom_point(inherit.aes=F, aes(x=1, y=3), shape=10, size=size) +
+    geom_point(inherit.aes=F, aes(x=2, y=3), shape=11, size=size) +
+    geom_point(inherit.aes=F, aes(x=3, y=3), shape=12, size=size) +
+    geom_point(inherit.aes=F, aes(x=4, y=3), shape=13, size=size) +
+    geom_point(inherit.aes=F, aes(x=5, y=3), shape=14, size=size) +
+    geom_point(inherit.aes=F, aes(x=1, y=4), shape=15, size=size) +
+    geom_point(inherit.aes=F, aes(x=2, y=4), shape=16, size=size) +
+    geom_point(inherit.aes=F, aes(x=3, y=4), shape=17, size=size) +
+    geom_point(inherit.aes=F, aes(x=4, y=4), shape=18, size=size) +
+    geom_point(inherit.aes=F, aes(x=5, y=4), shape=19, size=size) +
+    geom_point(inherit.aes=F, aes(x=1, y=5), shape=20, size=size) +
+    geom_point(inherit.aes=F, aes(x=2, y=5), shape=21, size=size) +
+    geom_point(inherit.aes=F, aes(x=3, y=5), shape=22, size=size) +
+    geom_point(inherit.aes=F, aes(x=4, y=5), shape=23, size=size) +
+    geom_point(inherit.aes=F, aes(x=5, y=5), shape=24, size=size) +
+    geom_point(inherit.aes=F, aes(x=1, y=6), shape=25, size=size) +
     geom_point(inherit.aes=F, aes(x=2, y=6), shape=26, size=size)
   p <- p + theme(axis.title=element_blank(), axis.text=element_blank(), axis.ticks=element_blank())
   return(p)
@@ -475,4 +479,52 @@ NMSE <- function(sim, obs, ...) {
 #' @export
 NSCE <- function(sim, obs, ...) {
   return(1 - NMSE(sim, obs, ...))
+}
+
+
+#' Statistics of each respective column
+#' @description Returns the statistic values, such as sum, mean, max,
+#' min of each column of dataframe or matrix.
+#' @param x a matrix of dataframe
+#' @param na.rm	logical. Should missing values (including NaN) be removed?
+#' @return A series of statistic value of each column of x.
+#' @name statistic_col
+#' @export
+sum_col <- function(x, ...) {
+  apply(x, 2, sum, ...)
+}
+
+
+#' @rdname statistic_col
+#' @export
+mean_col <- function(x, ...) {
+  apply(x, 2, mean, ...)
+}
+
+
+#' @rdname statistic_col
+#' @export
+max_col <- function(x, ...) {
+  apply(x, 2, max, ...)
+}
+
+
+#' @rdname statistic_col
+#' @export
+min_col <- function(x, ...) {
+  apply(x, 2, min, ...)
+}
+
+
+#' @rdname statistic_col
+#' @export
+var_col <- function(x, ...) {
+  apply(x, 2, var, ...)
+}
+
+
+#' @rdname statistic_col
+#' @export
+sd_col <- function(x, ...) {
+  apply(x, 2, sd, ...)
 }

@@ -20,7 +20,8 @@ LazyData: TRUE
 Imports:
     ggplot2,
     xts,
-    reshape2
+    reshape2,
+    lubridate
 URL: https://github.com/Sibada/sibadaR
 BugReports: https://github.com/Sibada/sibadaR/issues
 RoxygenNote: 5.0.1
