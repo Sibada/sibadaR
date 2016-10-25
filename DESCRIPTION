@@ -21,7 +21,9 @@ Imports:
     ggplot2,
     xts,
     reshape2,
-    lubridate
+    lubridate,
+    rvest,
+    downloader
 URL: https://github.com/Sibada/sibadaR
 BugReports: https://github.com/Sibada/sibadaR/issues
 RoxygenNote: 5.0.1
