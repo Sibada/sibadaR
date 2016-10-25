@@ -528,3 +528,14 @@ var_col <- function(x, ...) {
 sd_col <- function(x, ...) {
   apply(x, 2, sd, ...)
 }
+
+#' write.table without col names and row names
+#' @description The original write.table set col.names and row.names TRUE,
+#' and when we want to merely write out a pure dataset or matrix we should
+#' write in a long line: "col.names = F, row.names = F" and it so inconvenient
+#' and troublesome. Now have this function we could not write it again.
+#' Other usage is as same as write.table.
+#' @export
+wt <- function(x, file = "", ...) {
+  write.table(x, file, row.names = FALSE, col.names = FALSE)
+}
