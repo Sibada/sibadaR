@@ -554,13 +554,21 @@ get_nh <- function(aurl, dir = "", mustnewdir=FALSE) {
   apg=read_html(aurl)
 
   title <- apg %>% html_node('div[id="info-block"]')%>% html_node('div[id="info"]') %>% html_node('h1') %>% html_text()
+  print(paste("Collecting", title, "..."))
 
   pgnum <- length(apg %>% html_node('div[id="content"]') %>% html_node('div[id="thumbnail-container"]') %>% html_nodes('div[class="thumb-container"]'))
+  print(paste("Total", pgnum, "pgs."))
 
   title <- gsub('[:\\*\\\\\\"\\?\\|]', '', x=title)
   ifmkdir <- dir.create(paste(dir, title, sep = ""), recursive=F)
-  if(!ifmkdir & mustnewdir)
-    return
+  if(!ifmkdir){
+    if(mustnewdir){
+      return
+    } else {
+      warning("Warning: dir exist.")
+    }
+  }
+
 
   i <- 1
   while(i <= pgnum){
@@ -572,17 +580,18 @@ get_nh <- function(aurl, dir = "", mustnewdir=FALSE) {
         subpg <- read_html(suburl,timeout=1000)
 
         pgurl <-  subpg %>% html_node('div[id="content"]') %>% html_node('div[id="page-container"]') %>% html_node('section[id="image-container"]') %>% html_node('img') %>% html_attr('src')
-        pgurl <- paste('https:',pgurl,sep = '')
+        pgurl <- paste('https:', pgurl, sep = '')
 
-        ntmp <-  strsplit(pgurl,'/')[[1]]
+        ntmp <-  strsplit(pgurl, '/')[[1]]
         pgname <- ntmp[length(ntmp)]
-
-        download(pgurl,paste(dir, title,'/',pgname,sep=''),mode='wb')
+        pg_path <- paste(dir, title, '/', pgname, sep='')
+        download(pgurl, pg_path, mode='wb')
+        print(paste("Saving pg to", pg_path))
 
         getsucceed <- T
       },
       error = function(e){
-        print('diu')
+        print(paste('Error:', e))
         getsucceed <- F
       })
     }
