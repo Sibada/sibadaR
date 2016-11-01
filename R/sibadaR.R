@@ -466,8 +466,9 @@ RMSE <- function(sim, obs, ...) {
 #' @param obs Observed data series or data as reference.
 #' @return Normailzed mean square error of sim and obs series.
 #' @export
-NMSE <- function(sim, obs, ...) {
-  return(mean((obs - sim)**2, ...) / var(obs[!is.na(obs) & !is.na(sim)]))
+NMSE <- function(sim, obs) {
+  obs = obs[!is.na(obs) & !is.na(sim)]
+  return(mean((obs - sim)**2, na.rm = TRUE) / mean((obs - mean(obs))**2) )
 }
 
 
@@ -477,8 +478,8 @@ NMSE <- function(sim, obs, ...) {
 #' @param obs Observed data series or data as reference.
 #' @return Nash-Sutcliffe coefficient of efficiency of sim and obs series.
 #' @export
-NSCE <- function(sim, obs, ...) {
-  return(1 - NMSE(sim, obs, ...))
+NSCE <- function(sim, obs) {
+  return(1 - NMSE(sim, obs))
 }
 
 
