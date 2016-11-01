@@ -4,7 +4,7 @@
 \alias{NSCE}
 \title{Nash-Sutcliffe coefficient of efficiency}
 \usage{
-NSCE(sim, obs, ...)
+NSCE(sim, obs)
 }
 \arguments{
 \item{sim}{Simulated data series or data to be evaluated.}
