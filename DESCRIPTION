@@ -23,7 +23,8 @@ Imports:
     reshape2,
     lubridate,
     rvest,
-    downloader
+    downloader,
+    gstat
 URL: https://github.com/Sibada/sibadaR
 BugReports: https://github.com/Sibada/sibadaR/issues
 RoxygenNote: 5.0.1
