@@ -96,26 +96,179 @@ soil_convert <- function(soil_props, nlayer=3) {
 
     names(soil_hydro_params)[l] <- sprintf("EXPT_%d", l)
     names(soil_hydro_params)[l + nlayer] <- sprintf("Ksat_%d", l)
-    names(soil_hydro_params)[l + nlayer*2] <- sprintf("BUBLE_%d", l)
-    names(soil_hydro_params)[l + nlayer*3] <- sprintf("BULKDN_%d", l)
-    names(soil_hydro_params)[l + nlayer*4] <- sprintf("WcrFT_%d", l)
-    names(soil_hydro_params)[l + nlayer*5] <- sprintf("WpFT_%d", l)
+    names(soil_hydro_params)[l + nlayer*2] <- sprintf("BUBLE%d", l)
+    names(soil_hydro_params)[l + nlayer*3] <- sprintf("BULKDN%d", l)
+    names(soil_hydro_params)[l + nlayer*4] <- sprintf("WcrFT%d", l)
+    names(soil_hydro_params)[l + nlayer*5] <- sprintf("WpFT%d", l)
   }
 
   return(soil_hydro_params)
 }
 
-#create_soil_params <- function(coords, elev, soil_props, anprec, T_avg=NA, quarz=NA) {
+#' Create the soil parameters for VIC model.
+#'
+#' @description Create the soil parameters for VIC model by offering coordinates, elevations
+#'              and other datas. Each row of each data must be corresponding to a gridcell.
+#'
+#' @param coords A data frame containing ongitude and latitude coordinate of the gridcells.
+#'               First column must be the longitudes while the second column must be the
+#'               latitudes.
+#' @param elev A vector containing the elevation of each gridcell.
+#'
+#' @param soil_props A dataframe like what the function soil_convert needs.
+#'
+#' @param anprec A vector containing the annual average precipitation of each gridcell.
+#'
+#' @param avg_T Average soil temperature of each gridcell. Would create from the global
+#'              dataset by interpolation if not offered.
+#'
+#' @param organic Organic parameters. Including the fraction of organic matter, its bulk
+#'                density and its partial density for each soil layer.
+#'
+#' @param Javg Average temperature in July at each gridcell.
+#'
+#' @param quarzs Quarz content of soil of each gridcell. Would create from the global
+#'               dataset by interpolation if not offered.
+#'
+#' @param nlayer Num of soil layers.
+#'
+#' @return A data frame containing the soil parameters needed by the VIC model. Can
+#'         be write to file use write.table for use.
+#'
+#'
+#' @export
+create_soil_params <- function(coords, elev, soil_props, anprec, nlayer=3, avg_T=NA, quarzs=NA, organic=NA, Javg=NA) {
+  if(!(nrow(coords) == nrow(elev) & nrow(coords) == nrow(soil_props) & nrow(coords) == anprec)) {
+    stop("Input data has different rows.")
+  }
+  ncell <- nrow(coords)
 
-#}
+  lng <- coords[ ,1]
+  lat <- coords[ ,2]
 
+  soil_hydraulic <- soil_convert(soil_props, nlayer=nlayer)
+  soil_hydraulic <- round(soil_hydraulic, 3)
+  offgmt <- lng / 15
 
+  # Create avg_T parameter by interaporation from global soil parameters dataset.
+  if(is.na(avg_T)){
+    avgT_o <- data.frame(x=VIC_global_soil$LNG, y=VIC_global_soil$LAT, z=VIC_global_soil$AVG_T)
+    coordinates(avgT_o) <- ~x + y
+    grids <- data.frame(x=lng, y=lat)
+    coordinates(grids) <- ~x + y
+    gridded(grids) <- TRUE
+
+    avg_T <- data.frame(idw(z~1, avgT_o, grids, nmax=4, maxdist=0.7071068, debug.level=0))[ , 3]
+  }
+
+  # Create quarz parameters by interaporation from global soil parameters dataset.
+  if(is.na(quarzs)){
+    quarz_os <- data.frame(VIC_global_soil$QUARZ1, VIC_global_soil$QUARZ2, VIC_global_soil$QUARZ3)
+    quarzs <- data.frame(QUARZ1=rep(0, ncell))
+    for(l in 1:nlayer){
+      if(l > 3) {
+        quarz_o <- quarz_os[ , 3]
+      } else {
+        quarz_o <- quarz_os[ , l]
+      }
+      quarz_o <- data.frame(x=VIC_global_soil$LNG, y=VIC_global_soil$LAT, z=quarz_o)
+      coordinates(quarz_o) <- ~x + y
+      grids <- data.frame(x=lng, y=lat)
+      coordinates(grids) <- ~x + y
+      gridded(grids) <- TRUE
+
+      quarz <- data.frame(idw(z~1, quarz_o, grids, nmax=4, maxdist=0.7071068, debug.level=0))[ , 3]
+      quarzs[sprintf('QUARZ%d', l)] <- quarz
+    }
+  } else {
+    if(ncol(quarzs) != nlayer) {
+      stop("Column of quarzs is not equal to layers.")
+    }
+
+    names(quarzs) <- paste("QUARZ", 1:nlayer, sep="")
+  }
+
+  # Organic part.
+  if(!is.na(organic)) {
+    if(ncol(organic) != nlayer*3){
+      stop("Column of organic is not equal.")
+    }
+    names(organic) <- c(paste("ORGANIC", 1:nlayer, sep=""),
+                        paste("BULKDN_ORG", 1:nlayer, sep=""),
+                        paste("PARTDN_ORG", 1:nlayer, sep=""))
+  }
+
+  #############################################################################
+  # Fill the table of soil parameters.
+  #############################################################################
+  soil_params <- data.frame(RUN=rep(1, ncell))
+  names(soil_params) <- "#RUN"
+  soil_params$GRID <- 1:ncell
+  soil_params$LAT <- lat
+  soil_params$LNG <- lng
+
+  soil_params$INFILT <- 0.25
+  soil_params$Ds <- 0.1
+  soil_params$Ds_MAX <- 16
+  soil_params$Ws <- 0.8
+
+  soil_params$C <- 2
+  soil_params <- cbind(soil_params, soil_hydraulic[ , 1:(nlayer*2)])
+
+  for(l in 1:nlayer) {
+    soil_params[sprintf('PHI_%d', l)] <- -999
+  }
+
+  for(l in 1:nlayer) {
+    soil_params[sprintf('MOIST_%d', l)] <- 0.36
+  }
+
+  soil_params$ELEV <- round(elev, 1)
+
+  soil_params$DEPTH_1 <- 0.1
+  for(l in 2:nlayer) {
+    soil_params[sprintf('DEPTH_%d', l)] <- 0.3
+  }
+
+  soil_params$AVG_T <- avg_T
+  soil_params$DP <- 4.0
+
+  soil_params <- cbind(soil_params, soil_hydraulic[ , (nlayer*2+1):(nlayer*3)])
+  soil_params <- cbind(soil_params, quarzs)
+  soil_params <- cbind(soil_params, soil_hydraulic[ , (nlayer*3+1):(nlayer*4)])
+
+  for(l in 1:nlayer) {
+    soil_params[sprintf('PARKDN%d', l)] <- 2650
+  }
+
+  if(!is.na(organic)) {
+    soil_params <- cbind(soil_params, organic)
+  }
+
+  soil_params$OFF_GMT <- offgmt
+  soil_params <- cbind(soil_params, soil_hydraulic[ , (nlayer*4+1):(nlayer*6)])
+  soil_params$Z0_SOIL <- 0.010
+  soil_params$Z0_SNOW <- 0.001
+  soil_params$PRCP <- anprec
+
+  for(l in 1:nlayer) {
+    soil_params[sprintf('RESM%d', l)] <- 0.02
+  }
+
+  soil_params$FS_ACTV <- 1
+
+  if(!is.na(Javg)) {
+    soil_params$JULY_TAVG <- Javg
+  }
+
+  return(soil_params)
+}
 
 #' Create the veg params file for VIC model.
 #'
 #' @description Create the vegetration parameter file (generally named "veg_params.txt") with
 #'              the output stat data of each single vegetration tile and the gridcell id which
-#'              it distributed in.
+#'              it distributed in. The vegetration data is usually from the dataset of UMD.
 #'
 #' @param pre_veg_params A vector of integer, the rare two bit means the id ofa kind of
 #'                       vegetration conver, and the front bits means the id of the gridcell.

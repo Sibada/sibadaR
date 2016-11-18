@@ -19,6 +19,6 @@ not be considerated in.}
 \description{
 Create the vegetration parameter file (generally named "veg_params.txt") with
              the output stat data of each single vegetration tile and the gridcell id which
-             it distributed in.
+             it distributed in. The vegetration data is usually from the dataset of UMD.
 }
 
