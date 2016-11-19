@@ -23,7 +23,8 @@ Imports:
     reshape2,
     lubridate,
     gstat,
-    sp
+    sp,
+    ncdf4
 Suggests:
     rvest,
     downloader

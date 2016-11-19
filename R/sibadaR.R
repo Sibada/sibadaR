@@ -626,3 +626,76 @@ loss_time <- function(ts, gap="h"){
   }
   return(loss)
 }
+
+#' Read IMERG data from netCDF4 file.
+#' @description Only for the nc4 format IMERG data. Offering a series of path
+#'              of the IMERG files, or single file path, and the coordinates
+#'              of the data. Noted that the
+#' @param files Paths of the IMERG files to be read.
+#' @param x Longitudes of the points where get the precipitation data.
+#' @param y Latitudes of the points where get the precipitation data. Length
+#'          should be as same as x.
+#' @param varsn Order of which variable to be read. Default the first variable.
+#'
+#' @param verbose If TRUE, it will print the files read. Default FALSE.
+#' @return A data frame of the IMERG data, for each column means a point, and
+#'         each row means a time step. If only offered one point or one file,
+#'         will return a vector of the data.
+#' @export
+readIMERG_nc4 <- function(files, x, y, varsn=1, verbose=FALSE) {
+  if(length(x) != length(y)){
+    stop("Lengths of x and y are not equal.")
+  }
+
+  l <- min(x)
+  r <- max(x)
+  b <- min(y)
+  t <- max(y)
+
+  f <- fs[1]
+  nc <- nc_open(f)
+  lon <- nc$dim$lon$vals
+  lat <- nc$dim$lat$vals
+  nc_close(nc)
+
+  rows <- rep(0, length(x))
+  cols <- rep(0, length(y))
+  for(i in 1:length(x)){
+    col <- which.min(abs(x[i]-lon))
+    row <- which.min(abs(y[i]-lat))
+    cols[i] <- col
+    rows[i] <- row
+  }
+
+  lc <- which.min(abs(l-lon))
+  rc <- which.min(abs(r-lon))
+  br <- which.min(abs(b-lat))
+  tr <- which.min(abs(t-lat))
+
+  ncol <- rc-lc+1
+  nrow <- tr-br+1
+
+  srows <- rows-br+1
+  scols <- cols-lc+1
+  dat <- data.frame(matrix(0, ncol=length(x), nrow=length(fs)))
+
+  for(d in 1:length(fs)) {
+    if(verbose) {
+      print(paste("Reading", fs[d]))
+    }
+    nc=nc_open(fs[d])
+    pvar <- nc$var[[varsn]]
+    value <- ncvar_get(nc, pvar, c(br, lc), c(nrow, ncol))
+
+    for(i in 1:length(x)) {
+      dat[d, i] <- value[srows[i], scols[i]]
+    }
+    nc_close(nc)
+  }
+  if(nrow(dat) == 1)
+    dat <- as.numeric(dat)
+  if(ncol(dat) == 1)
+    dat <- as.numeric(dat)
+
+  return(dat)
+}
