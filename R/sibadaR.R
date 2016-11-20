@@ -604,26 +604,27 @@ get_nh <- function(aurl, dir = "", mustnewdir=FALSE) {
 
 #' Get the deficiency of the time series.
 #' @param ts Time series to be find the lose time.
-#' @param gap Time step of the time series, including "h", "m", "s" for hour, minute and second.
 #' @return The time stamp lost in the time series.
 #' @export
-loss_time <- function(ts, gap="h"){
-  if(gap == "h") tf <- 3600
-  if(gap == "m") tf <- 60
-  if(gap == "s") tf <- 1
+loss_time <- function(ts){
+  ts <- sort(ts)
   len <- length(ts)
-  diss <- ts[2:len] - ts[1:(len-1)]
-  mdis <- which.max(table(diss))
+  int_ts <- as.integer(as.POSIXct(ts))
+  diss <- as.numeric(int_ts[2:len] - int_ts[1:(len - 1)])
+  mdis <- as.numeric(names(which.max(table(diss))))
   lp <- which(diss != mdis)
   ll <- diss[diss != mdis]
   loss <- c()
-  for(i in 1:length(lp)) {
-    stime <- ts[lp[i]]
-    for(g in 1:(ll[i]-1)) {
-      ls <- stime + g*tf
+
+  for (i in 1:length(lp)) {
+    if(ll[i] == 0)break
+    stime <- int_ts[lp[i]]
+    for (g in seq(mdis, ll[i], by=mdis)) {
+      ls <- stime + g
       loss <- append(loss, ls)
     }
   }
+  loss <- as.POSIXct(loss, origin="1970-01-01")
   return(loss)
 }
 

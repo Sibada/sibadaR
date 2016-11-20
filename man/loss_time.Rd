@@ -4,12 +4,10 @@
 \alias{loss_time}
 \title{Get the deficiency of the time series.}
 \usage{
-loss_time(ts, gap = "h")
+loss_time(ts)
 }
 \arguments{
 \item{ts}{Time series to be find the lose time.}
-
-\item{gap}{Time step of the time series, including "h", "m", "s" for hour, minute and second.}
 }
 \value{
 The time stamp lost in the time series.
