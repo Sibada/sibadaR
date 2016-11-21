@@ -24,7 +24,8 @@ Imports:
     lubridate,
     gstat,
     sp,
-    ncdf4
+    ncdf4,
+    shape
 Suggests:
     rvest,
     downloader

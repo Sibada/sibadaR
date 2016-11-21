@@ -26,6 +26,6 @@ A data frame of the IMERG data, for each column means a point, and
 \description{
 Only for the nc4 format IMERG data. Offering a series of path
              of the IMERG files, or single file path, and the coordinates
-             of the data. Noted that the
+             of the data.
 }
 

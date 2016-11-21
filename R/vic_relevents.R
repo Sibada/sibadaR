@@ -338,14 +338,13 @@ create_veg_params <- function(pre_veg_params, out_file, aban=0.03) {
   write.table(out_text, out_file, row.names=F, col.names=F, quote=F)
 }
 
-# flow_file <- '~/IMERG/predata/flow_bj.nc'
-# domain_file <- '~/IMERG/predata/grids.nc'
-
 #' Create the flow direction of each gridcell for VIC routing model.
 #'
-#' @description Create the vegetration parameter file (generally named "veg_params.txt") with
-#'              the output stat data of each single vegetration tile and the gridcell id which
-#'              it distributed in. The vegetration data is usually from the dataset of UMD.
+#' @description Create the flow direction data of each VIC gridcell for the routing model
+#'              of VIC by providing a high resolution flow accumulation data (about 90m
+#'              usually caculated from SRTM DEM by ArcGIS) and the domain file of VIC model.
+#'              WARNING: This is a simple heuristic method and more fit for small gridcell.
+#'              It's usually needs further manual calibration by set_direc and plot_flow_direc.
 #'
 #' @param flow_file An netCDF4 file of the flow accumulation data from high resolution DEM
 #'                  (about 90m). Must containing all the area.
@@ -353,6 +352,9 @@ create_veg_params <- function(pre_veg_params, out_file, aban=0.03) {
 #' @param arc_code If the direction code is ArcInfo type. If FALSE, it would set to 1 to 8.
 #'
 #' @param diag_tsh Diag threshould. Determine if flow to the diag gridcell.
+#'
+#' @return A list including the meta parameters (num of rows and columns, size of the cells,
+#'         x and y corner) and the matrix of the flow direction data.
 #'
 #' @export
 create_flow_direction <- function(flow_file, domain_file, arc_code=TRUE, diag_tsh=0.382) {
@@ -447,8 +449,13 @@ create_flow_direction <- function(flow_file, domain_file, arc_code=TRUE, diag_ts
   }
   direc <- t(direc)
   nc_close(flow_nc)
-
-  return(direc)
+  arcgrid <- list('ncols'=nrows,
+                  'nrows'=ncols,  # The row and col is inversed of nc file.
+                  'xllcorner'=min(glons)-csizex/2,
+                  'yllcorner'=min(glats)-csizey/2,
+                  'cellsize'=(csizex+csizey)/2,
+                  'grid'=direc)
+  return(arcgrid)
 }
 
 # Assistant function.
@@ -467,6 +474,10 @@ get_border <- function(nc, x, y, xsize, ysize) {
   rf <- ncvar_get(nc, nc$var[[1]], c(cols[ncol], rows[1]), c(1, nrow))
   tf <- ncvar_get(nc, nc$var[[1]], c(cols[1], rows[1]), c(ncol, 1))
   bf <- ncvar_get(nc, nc$var[[1]], c(cols[1], rows[120]), c(ncol, 1))
+  lf[is.na(lf)] <- 0
+  rf[is.na(rf)] <- 0
+  tf[is.na(tf)] <- 0
+  bf[is.na(bf)] <- 0
 
   lf <- rev(lf)
   bf <- rev(bf)
@@ -524,12 +535,23 @@ grid2points <- function(grid, x=NULL, y=NULL, csize=NULL, xcor=NULL, ycor=NULL, 
   return(points)
 }
 
-# direc=create_flow_direction(flow_file, domain_file, diag_tsh = 0.5)
-# direc=grid2points(direc, x=glons, y=glats)
-# plot(dr, col='blue')
 
-#points2grid(points, val=3, out_file = "~/soil_moi.txt")
-
+#' Convert the point data (a table including columns of the coordinates and value) to
+#' grid.
+#'
+#' @description Conver the point data, usually a table with columns including coordinates
+#'              and values to grids.
+#'
+#' @param grid A matrix of the gridded data.
+#' @param x Which column store the x cordinate.
+#' @param y Which column store the y cordinate.
+#' @param val Which column store the point value.
+#' @param out_file The output file path. If provide, it will write as an ArcInfo file
+#'                 without return.
+#'
+#' @return A list including the meta parameters (num of rows and columns, size of the cells,
+#'         x and y corner) and the matrix of the gridcell value.
+#' @export
 points2grid <- function(points, x=NULL, y=NULL, val=NULL, out_file=NULL) {
   acc <- 6
 
@@ -576,7 +598,13 @@ points2grid <- function(points, x=NULL, y=NULL, val=NULL, out_file=NULL) {
     grid[rows[p], cols[p]] <- v[p]
   }
   if(is.null(out_file)){
-    return(grid)
+    arcgrid <- list('ncols'=ncol,
+                    'nrows'=nrow,
+                    'xllcorner'=xcor,
+                    'yllcorner'=ycor,
+                    'cellsize'=cellsize,
+                    'grid'=grid)
+    return(arcgrid)
   } else {
     meta <- c(paste('ncols         ', ncol),
               paste('nrows         ', nrow),
@@ -589,18 +617,63 @@ points2grid <- function(points, x=NULL, y=NULL, val=NULL, out_file=NULL) {
   }
 }
 
-plot_flow_direc <- function(direc) {
+# river_shp='~/IMERG/predata/dense_river.shp'
+
+# flow_file <- '~/IMERG/predata/flow_bj.nc'
+# domain_file <- '~/IMERG/predata/grids.nc'
+
+# direc_grid=create_flow_direction(flow_file, domain_file, diag_tsh=0.3)
+
+#' Plot the flow direction of the flow direction data.
+#'
+#' @description Plot the flow direction of a flow direction data (created by
+#'              create_flow_direction()) for visullization and calibration. Can
+#'              provide a shp file of the river network to plot helping the
+#'              mannual calibration.
+#'
+#' @param direc Flow direction data created by create_flow_direction().
+#' @param arc_code If use the ArcInfo direction code.
+#' @param river_shp Path of the river shp file.
+#'
+#' @export
+plot_flow_direc <- function(direc, arc_code=TRUE, river_shp=NULL) {
   if(arc_code) {
     dir_code <- c(64, 128, 1, 2, 4, 8, 16, 32)
   } else {
     dir_code <- 1:8
   }
 
-  plot(direc[ , 1:2], pch=20, cex=0.3, asp=1)
+  if(!is.data.frame(direc)){
+    csize <- direc$cellsize
+    xcor <- direc$xllcorner
+    ycor <- direc$yllcorner
+    direc <- grid2points(direc$grid, xcor=xcor, ycor=ycor, csize=csize)
+  }
+
+  xticks <- sort(unique(direc[ , 1]))
+  yticks <- sort(unique(direc[ , 2]))
+  xlabs <- round((xticks - min(xticks))/(xticks[2]-xticks[1]) + 1)
+  ylabs <- round((yticks - min(yticks))/(yticks[2]-yticks[1]) + 1)
+
+  plot(direc[ , 1:2], cex=0, xaxt='n', yaxt='n', xlab=NA, ylab=NA, asp=1)
+  axis(1, xticks, xlabs)
+  axis(3, xticks, xlabs)
+  axis(2, yticks, ylabs)
+  axis(4, yticks, ylabs)
+  abline(h=yticks, col='grey')
+  abline(v=xticks, col='grey')
+
+  if(!is.null(river_shp)) {
+    rs <- readShapeLines(river_shp)
+    lines(rs, col='blue')
+  }
+  points(direc[ , 1:2], pch=20, cex=0.8)
+
   xcz <- sort(unique(direc[ ,1]))
   xcz <- mean(xcz[2:length(xcz)] - xcz[1:(length(xcz))-1])
   ycz <- sort(unique(direc[ ,2]))
   ycz <- mean(ycz[2:length(ycz)] - ycz[1:(length(ycz))-1])
+
   for(p in 1:nrow(direc)) {
     dx <- 0
     dy <- 0
@@ -628,6 +701,59 @@ plot_flow_direc <- function(direc) {
       dx <- -xcz
       dy <- ycz
     }
-    lines(c(x, x+dx), c(y, y+dy))
+    # arrows(c(x, x+dx), c(y, y+dy))
+    Arrows(x, y, x+dx, y+dy, arr.length = 0.15, arr.adj=0.15)
   }
 }
+
+#' Revise the flow direction of the flow direction data.
+#'
+#' @description Revise the flow direction of the flow direction data created by
+#'              create_flow_direction().
+#'
+#' @param direc_grid Flow direction data created by create_flow_direction().
+#' @param row Row of the gridcell to be revised.
+#' @param col Column of the gridcell to be revised.
+#' @param direc New flow direction of the gridcell. For more convinient calibration,
+#'              the direction code is sat as the keypad. It means that 1 is southwest,
+#'              2 is south, 3 is southeast, and so on. set keypad_dir to FALSE can
+#'              revise the direction code directly.
+#' @param arc_code If use the ArcInfo flow direction code.
+#' @param keypad_dir If use keypad flow direction code.
+#'
+#' @return The flow direction data after revise.
+#'
+#' @export
+set_direc <- function(direc_grid, row, col, direc, arc_code=TRUE, keypad_dir=TRUE) {
+  if(!is.list(direc_grid) | is.null(direc_grid$nrow | is.null(direc_grid$grid)))
+    stop("direc_grid is not a ArcInfo grid.")
+  if(arc_code) {
+    dir_map <- c(8, 4, 2, 16, NA, 1, 32, 64, 128)
+  } else {
+    dir_map <- c(6, 5, 4, 7, NA, 3, 8, 1, 2)
+  }
+  nrow <- direc_grid$nrows
+  if(keypad_dir) di <- dir_map[direc] else di <- direc
+  direc_grid$grid[nrow-row+1, col] <- di
+  return(direc_grid)
+}
+
+write_arc_grid <- function(grid, out_file, NA_value=-9999) {
+  NA_value <- paste(NA_value)
+  meta <- c(paste('ncols         ', round(grid$ncols,6)),
+            paste('nrows         ', round(grid$nrows,6)),
+            paste('xllcorner     ', round(grid$xllcorner,6)),
+            paste('yllcorner     ', round(grid$yllcorner,6)),
+            paste('cellsize      ', round(grid$cellsize,6)),
+            paste('NODATA_value  ', NA_value))
+  writeLines(meta, out_file)
+  write.table(grid$grid, out_file, append=TRUE, row.names=FALSE, col.names=FALSE, na="-9999")
+}
+
+
+# direc_grid = set_direc(direc_grid, 19, 11, 1)
+# direc_grid = set_direc(direc_grid, 14, 3, 3)
+# direc_grid = set_direc(direc_grid, 17, 8, 9)
+# plot_flow_direc(direc_grid, river_shp=river_shp)
+
+#write_arc_grid(direc_grid,'~/IMERG/direc.txt')
