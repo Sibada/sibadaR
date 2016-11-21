@@ -530,6 +530,7 @@ sd_col <- function(x, ...) {
   apply(x, 2, sd, ...)
 }
 
+
 #' write.table without col names and row names
 #' @description The original write.table set col.names and row.names TRUE,
 #' and when we want to merely write out a pure dataset or matrix we should
@@ -569,7 +570,6 @@ get_nh <- function(aurl, dir = "", mustnewdir=FALSE) {
       warning("Warning: dir exist.")
     }
   }
-
 
   i <- 1
   while(i <= pgnum){
@@ -616,6 +616,8 @@ loss_time <- function(ts){
   ll <- diss[diss != mdis]
   loss <- c()
 
+  if(length(ll) == 0)
+    return(ll)
   for (i in 1:length(lp)) {
     if(ll[i] == 0)break
     stime <- int_ts[lp[i]]
@@ -631,7 +633,7 @@ loss_time <- function(ts){
 #' Read IMERG data from netCDF4 file.
 #' @description Only for the nc4 format IMERG data. Offering a series of path
 #'              of the IMERG files, or single file path, and the coordinates
-#'              of the data. Noted that the
+#'              of the data.
 #' @param files Paths of the IMERG files to be read.
 #' @param x Longitudes of the points where get the precipitation data.
 #' @param y Latitudes of the points where get the precipitation data. Length
@@ -699,4 +701,27 @@ readIMERG_nc4 <- function(files, x, y, varsn=1, verbose=FALSE) {
     dat <- as.numeric(dat)
 
   return(dat)
+}
+
+#' Extract the sub strings of a single string or a string vector by regex.
+#' @description Extrect the sub strings by offering a pattern, which can
+#'              be regular expression in R.
+#' @param pattern A string or regular expression. The same parameter in function
+#'                gregexpr.
+#' @param text A character vector to be extract sub string.
+#' @param ... Other parameters of function gregexpr.
+#'
+#' @return A character vector when offering a single text, or a list containing
+#'         the matched sub strings of each texts. If each texts has the same
+#'         number of matched sub strings, it would be a multi-demantion vector.
+#' @export
+group <- function(pattern, text, ...) {
+  rgx <- gregexpr(pattern, text, ...)
+  mapply(function(rg, txt) {
+    start <- as.integer(rg)
+    end <- start + attr(rg, 'match.length') - 1
+    mapply(function(s, e) {
+      substr(txt, s, e)
+    }, start, end)
+  }, rgx, text)
 }

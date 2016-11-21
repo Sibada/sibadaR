@@ -338,3 +338,296 @@ create_veg_params <- function(pre_veg_params, out_file, aban=0.03) {
   write.table(out_text, out_file, row.names=F, col.names=F, quote=F)
 }
 
+# flow_file <- '~/IMERG/predata/flow_bj.nc'
+# domain_file <- '~/IMERG/predata/grids.nc'
+
+#' Create the flow direction of each gridcell for VIC routing model.
+#'
+#' @description Create the vegetration parameter file (generally named "veg_params.txt") with
+#'              the output stat data of each single vegetration tile and the gridcell id which
+#'              it distributed in. The vegetration data is usually from the dataset of UMD.
+#'
+#' @param flow_file An netCDF4 file of the flow accumulation data from high resolution DEM
+#'                  (about 90m). Must containing all the area.
+#' @param domain_file Domain file (netCDF4 format) of VIC model.
+#' @param arc_code If the direction code is ArcInfo type. If FALSE, it would set to 1 to 8.
+#'
+#' @param diag_tsh Diag threshould. Determine if flow to the diag gridcell.
+#'
+#' @export
+create_flow_direction <- function(flow_file, domain_file, arc_code=TRUE, diag_tsh=0.382) {
+  if(arc_code) {
+    dir_code <- c(64, 128, 1, 2, 4, 8, 16, 32)
+  } else {
+    dir_code <- 1:8
+  }
+
+  grids_nc <- nc_open(domain_file)
+  grids_var <- ncvar_get(grids_nc, grids_nc$var[[1]])
+  glons <- grids_nc$dim$lon$vals
+  glats <- grids_nc$dim$lat$vals
+  nc_close(grids_nc)
+
+  nrows <- length(glons)
+  ncols <- length(glats)
+  csizex <- abs(mean(glons[2:nx]-glons[1:(nx-1)]))
+  csizey <- abs(mean(glats[2:ny]-glats[1:(ny-1)]))
+
+  flow_nc <- nc_open(flow_file)
+
+  direc <- grids_var
+  direc[!is.na(direc)] <- 0
+  for(col in 1:ncols) {
+    for(row in 1:nrows) {
+      if(is.na(direc[row, col]) | direc[row, col] > 0) next
+
+      glon <- glons[row]
+      glat <- glats[col]
+
+      mf <- get_border(flow_nc, glon, glat, csizex, csizey)
+      mfd <- mf[1]
+      mfs <- mf[2]
+
+      nextrow <- row
+      nextcol <- col
+      if(mfd == 1) {
+        nextcol <- col - 1
+      } else if(mfd == 2) {
+        nextrow <- row + 1
+      } else if(mfd == 3) {
+        nextcol <- col + 1
+      } else {
+        nextrow <- row - 1
+      }
+
+      if(mfd == 1) {
+        old <- dir_code[8]
+        osd <- dir_code[1]
+        ord <- dir_code[2]
+      } else if(mfd == 2) {
+        old <- dir_code[2]
+        osd <- dir_code[3]
+        ord <- dir_code[4]
+      } else if(mfd == 3) {
+        old <- dir_code[4]
+        osd <- dir_code[5]
+        ord <- dir_code[6]
+      } else if(mfd == 4) {
+        old <- dir_code[6]
+        osd <- dir_code[7]
+        ord <- dir_code[8]
+      }
+
+      if(mfd == 1 & nextcol < 1 | mfd == 2 & nextrow > nrows |
+         mfd == 3 & nextcol > ncols | mfd == 4 & nextrow < 1) {
+        direc[row, col] <- osd
+        next
+      }
+
+      nglon <- glons[nextrow]
+      nglat <- glats[nextcol]
+
+      nmf <- get_border(flow_nc, nglon, nglat, csizex, csizey)
+      nmfd <- nmf[1]
+      nmfs <- nmf[2]
+
+      nmfd <- (nmfd + 4 - mfd) %% 4 + 1
+
+      if(nmfd == 3) {
+        direc[row, col] <- osd
+        direc[nextrow, nextcol] <- osd
+      } else if(nmfd == 4 & mfs < diag_tsh & nmfs < diag_tsh) {
+        direc[row, col] <- old
+      } else if(nmfd == 2 & mfs > 1-diag_tsh & nmfs > 1-diag_tsh) {
+        direc[row, col] <- ord
+      } else {
+        direc[row, col] <- osd
+      }
+    }
+  }
+  direc <- t(direc)
+  nc_close(flow_nc)
+
+  return(direc)
+}
+
+# Assistant function.
+get_border <- function(nc, x, y, xsize, ysize) {
+  flons <- nc$dim$x$vals
+  flats <- nc$dim$y$vals
+  l <- x - xsize/2
+  r <- x + xsize/2
+  t <- y + ysize/2
+  b <- y - ysize/2
+  cols <- which(flons > l & flons < r)
+  rows <- which(flats > b & flats < t)
+  ncol <- length(cols)
+  nrow <- length(rows)
+  lf <- ncvar_get(nc, nc$var[[1]], c(cols[1], rows[1]), c(1, nrow))
+  rf <- ncvar_get(nc, nc$var[[1]], c(cols[ncol], rows[1]), c(1, nrow))
+  tf <- ncvar_get(nc, nc$var[[1]], c(cols[1], rows[1]), c(ncol, 1))
+  bf <- ncvar_get(nc, nc$var[[1]], c(cols[1], rows[120]), c(ncol, 1))
+
+  lf <- rev(lf)
+  bf <- rev(bf)
+  maxps <- c(which.max(tf), which.max(rf), which.max(bf), which.max(lf))
+  maxs <- c(max(tf), max(rf), max(bf), max(lf))
+  maxside <- which.max(maxs)
+
+  if(maxside == 1 | maxside == 3) {
+    maxp <- maxps[maxside]/ncol
+  } else {
+    maxp <- maxps[maxside]/nrow
+  }
+  return(c(maxside, maxp))
+}
+
+#' Convert the grid data (save as matrix) to points.
+#'
+#' @description Conver the grid data to points, showed as a table, with the columns of
+#'              coordinates for each point and a column for their value.
+#'
+#' @param grid A matrix of the gridded data.
+#' @param x X coordinates for each column of the grid.
+#' @param y Y coordinates for each column of the grid.
+#' @param csize Size of each gridcell.
+#' @param xcor X coordinate of the southwest corner of the grid.
+#' @param xcor Y coordinate of the southwest corner of the grid.
+#'
+#' @return A table of the points, including x and y coordinate and the values, converted
+#'         from the grid.
+#' @export
+grid2points <- function(grid, x=NULL, y=NULL, csize=NULL, xcor=NULL, ycor=NULL, NA_value=NULL) {
+  if((is.null(x) | is.null(y)) & (is.null(csize) | is.null(xcor) | is.null(ycor))) {
+    stop("Must provide x, y or csize, xcor, ycor")
+  }
+
+  if(is.null(x) | is.null(y)) {
+    x <- (1:ncol(grid)) * csize - csize/2 + xcor
+    y <- (nrow(grid):1) * csize - csize/2 + ycor
+  }
+  xs <- c()
+  ys <- c()
+  vs <- c()
+  if(!is.null(NA_value)) grid[grid == NA_value] = NA
+  for(row in 1:nrow(grid)) {
+    for(col in 1:ncol(grid)) {
+      if(is.na(grid[row, col])) next
+
+      xs <- append(xs, x[col])
+      ys <- append(ys, y[row])
+      vs <- append(vs, grid[row, col])
+      }
+  }
+  points <- data.frame(xs, ys, vs)
+  names(points) <- c('x', 'y', 'value')
+  return(points)
+}
+
+# direc=create_flow_direction(flow_file, domain_file, diag_tsh = 0.5)
+# direc=grid2points(direc, x=glons, y=glats)
+# plot(dr, col='blue')
+
+#points2grid(points, val=3, out_file = "~/soil_moi.txt")
+
+points2grid <- function(points, x=NULL, y=NULL, val=NULL, out_file=NULL) {
+  acc <- 6
+
+  if(is.null(x)) {
+    xs <- points[ , 1]
+  } else {
+    xs <- points[ , x]
+  }
+  if(is.null(y)) {
+    ys <- points[ , 2]
+  } else {
+    ys <- points[ , y]
+  }
+  print(val)
+  if(is.null(val)) {
+    v <- points[ , 3]
+  } else {
+    v <- points[ , val]
+  }
+
+  ux <- sort(unique(round(xs, acc)))
+  uy <- sort(unique(round(ys, acc)))
+
+  ncol <- length(ux)
+  nrow <- length(uy)
+
+  itvx <- unique(round(ux[2:ncol] - ux[1:(ncol-1)], acc))
+  itvy <- unique(round(uy[2:nrow] - uy[1:(nrow-1)], acc))
+  if(length(itvx) > 1 | length(itvy) > 1 |
+     itvx[1] != itvy[1]) {
+    stop("Intervals of points are not equal. Cannot be gridded.")
+  }
+  cellsize <- itvx
+
+  xcor <- min(ux) - cellsize/2
+  ycor <- min(uy) - cellsize/2
+
+  cols <- (xs - xcor + cellsize/2)/cellsize
+  rows <- (ys - ycor + cellsize/2)/cellsize
+  rows <- max(rows) - rows + 1
+
+  grid <- matrix(nrow=nrow, ncol=ncol)
+  for(p in 1:nrow(points)) {
+    grid[rows[p], cols[p]] <- v[p]
+  }
+  if(is.null(out_file)){
+    return(grid)
+  } else {
+    meta <- c(paste('ncols         ', ncol),
+              paste('nrows         ', nrow),
+              paste('xllcorner     ', xcor),
+              paste('yllcorner     ', ycor),
+              paste('cellsize      ', cellsize),
+              paste('NODATA_value  ', '-9999'))
+    writeLines(meta, out_file)
+    write.table(grid, out_file, append=TRUE, row.names=FALSE, col.names=FALSE, na="-9999")
+  }
+}
+
+plot_flow_direc <- function(direc) {
+  if(arc_code) {
+    dir_code <- c(64, 128, 1, 2, 4, 8, 16, 32)
+  } else {
+    dir_code <- 1:8
+  }
+
+  plot(direc[ , 1:2], pch=20, cex=0.3, asp=1)
+  xcz <- sort(unique(direc[ ,1]))
+  xcz <- mean(xcz[2:length(xcz)] - xcz[1:(length(xcz))-1])
+  ycz <- sort(unique(direc[ ,2]))
+  ycz <- mean(ycz[2:length(ycz)] - ycz[1:(length(ycz))-1])
+  for(p in 1:nrow(direc)) {
+    dx <- 0
+    dy <- 0
+    x <- direc[p, 1]
+    y <- direc[p, 2]
+    d <- direc[p, 3]
+    if(d == dir_code[1]) {
+      dy <- ycz
+    } else if(d == dir_code[2]) {
+      dy <- ycz
+      dx <- xcz
+    } else if(d == dir_code[3]) {
+      dx <- xcz
+    } else if(d == dir_code[4]) {
+      dy <- -ycz
+      dx <- xcz
+    } else if(d == dir_code[5]) {
+      dy <- -ycz
+    } else if(d == dir_code[6]) {
+      dy <- -ycz
+      dx <- -xcz
+    } else if(d == dir_code[7]) {
+      dx <- -xcz
+    } else if(d == dir_code[8]) {
+      dx <- -xcz
+      dy <- ycz
+    }
+    lines(c(x, x+dx), c(y, y+dy))
+  }
+}
