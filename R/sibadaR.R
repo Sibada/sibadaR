@@ -466,9 +466,9 @@ RMSE <- function(sim, obs, ...) {
 #' @param obs Observed data series or data as reference.
 #' @return Normailzed mean square error of sim and obs series.
 #' @export
-NMSE <- function(sim, obs) {
+NMSE <- function(sim, obs, ...) {
   obs = obs[!is.na(obs) & !is.na(sim)]
-  return(mean((obs - sim)**2, na.rm = TRUE) / mean((obs - mean(obs))**2) )
+  return(mean((obs - sim)**2, ...) / mean((obs - mean(obs))**2, ...) )
 }
 
 
@@ -478,10 +478,19 @@ NMSE <- function(sim, obs) {
 #' @param obs Observed data series or data as reference.
 #' @return Nash-Sutcliffe coefficient of efficiency of sim and obs series.
 #' @export
-NSCE <- function(sim, obs) {
-  return(1 - NMSE(sim, obs))
+NSCE <- function(sim, obs, ...) {
+  return(1 - NMSE(sim, obs, ...))
 }
 
+#' Relative bias
+#' @description Calculate relative bias (fraction, not percentage) of two data series.
+#' @param sim Simulated data series or data to be evaluated.
+#' @param obs Observed data series or data as reference.
+#' @return Relative bias of efficiency of sim and obs series.
+#' @export
+BIAS <- function(sim, obs, ...) {
+  return(mean(sim, ...)/mean(obs, ...) - 1)
+}
 
 #' Statistics of each respective column
 #' @description Returns the statistic values, such as sum, mean, max,

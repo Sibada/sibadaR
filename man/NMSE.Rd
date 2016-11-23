@@ -4,7 +4,7 @@
 \alias{NMSE}
 \title{Normailzed mean square error}
 \usage{
-NMSE(sim, obs)
+NMSE(sim, obs, ...)
 }
 \arguments{
 \item{sim}{Simulated data series or data to be evaluated.}
