@@ -655,7 +655,7 @@ readIMERG_nc4 <- function(files, x, y, varsn=1, verbose=FALSE) {
   b <- min(y)
   t <- max(y)
 
-  f <- fs[1]
+  f <- files[1]
   nc <- nc_open(f)
   lon <- nc$dim$lon$vals
   lat <- nc$dim$lat$vals
@@ -680,13 +680,13 @@ readIMERG_nc4 <- function(files, x, y, varsn=1, verbose=FALSE) {
 
   srows <- rows-br+1
   scols <- cols-lc+1
-  dat <- data.frame(matrix(0, ncol=length(x), nrow=length(fs)))
+  dat <- data.frame(matrix(0, ncol=length(x), nrow=length(files)))
 
-  for(d in 1:length(fs)) {
+  for(d in 1:length(files)) {
     if(verbose) {
-      print(paste("Reading", fs[d]))
+      print(paste("Reading", files[d]))
     }
-    nc=nc_open(fs[d])
+    nc=nc_open(files[d])
     pvar <- nc$var[[varsn]]
     value <- ncvar_get(nc, pvar, c(br, lc), c(nrow, ncol))
 

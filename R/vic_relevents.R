@@ -781,6 +781,7 @@ write_arc_grid <- function(grid, out_file, xcor=NULL, ycor=NULL, csize=NULL, NA_
     griddata <- grid
   }
 
+  griddata <- griddata[nrows:1, ]
   meta <- c(paste('ncols         ', round(ncols,  6)),
             paste('nrows         ', round(nrows,  6)),
             paste('xllcorner     ', round(xllcorner, 6)),
