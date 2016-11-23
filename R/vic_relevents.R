@@ -738,16 +738,57 @@ set_direc <- function(direc_grid, row, col, direc, arc_code=TRUE, keypad_dir=TRU
   return(direc_grid)
 }
 
-write_arc_grid <- function(grid, out_file, NA_value=-9999) {
-  NA_value <- paste(NA_value)
-  meta <- c(paste('ncols         ', round(grid$ncols,6)),
-            paste('nrows         ', round(grid$nrows,6)),
-            paste('xllcorner     ', round(grid$xllcorner,6)),
-            paste('yllcorner     ', round(grid$yllcorner,6)),
-            paste('cellsize      ', round(grid$cellsize,6)),
+#' Write ArcInfo ASCII grid data.
+#'
+#' @description Write the grid data to the file as a ArcInfo type ASCII file by
+#'              offering a list of grid data like the output of points2grid()
+#'              or create_flow_direction(), or a matrix and some necessary
+#'              informations like cell size, x and y corner of the grid data and
+#'              so on.
+#'
+#' @param grid A list of grid data or a matrix. When it's a matrix, xcor, ycor and
+#'             csize are necessary.
+#' @param out_file Output file path.
+#' @param xcor X corner of the grid. Necessary when grid is a matrix.
+#' @param ycor Y corner of the grid. Necessary when grid is a matrix.
+#' @param csize Cell size of the grid. Necessary when grid is a matrix.
+#' @param NA_value A value to reprent the NA value.
+#'
+#' @export
+write_arc_grid <- function(grid, out_file, xcor=NULL, ycor=NULL, csize=NULL, NA_value=-9999) {
+  if(is.list(grid)) {
+    if(is.null(grid$xllcorner) | is.null(grid$yllcorner) | is.null(grid$cellsize)) {
+      stop("grid should have xllcorner, yllconer and cellsize.")
+    }
+    ncols=ncol(grid)
+    nrows=nrow(grid)
+    xllcorner <- grid$xllcorner
+    yllcorner <- grid$yllcorner
+    cellsize <- grid$cellsize
+    griddata <- grid$grid
+  } else {
+    if(!is.matrix(grid)) {
+      stop("grid should be a list or a matirx.")
+    }
+    if(is.null(xcor) | is.null(ycor) | is.null(csize)) {
+      stop("xcor, ycor and csize must provided when grid is a matrix.")
+    }
+    ncols=ncol(grid)
+    nrows=nrow(grid)
+    xllcorner <- xcor
+    yllcorner <- ycor
+    cellsize <- csize
+    griddata <- grid
+  }
+
+  meta <- c(paste('ncols         ', round(ncols,  6)),
+            paste('nrows         ', round(nrows,  6)),
+            paste('xllcorner     ', round(xllcorner, 6)),
+            paste('yllcorner     ', round(yllcorner, 6)),
+            paste('cellsize      ', round(cellsize, 6)),
             paste('NODATA_value  ', NA_value))
   writeLines(meta, out_file)
-  write.table(grid$grid, out_file, append=TRUE, row.names=FALSE, col.names=FALSE, na="-9999")
+  write.table(griddata, out_file, append=TRUE, row.names=FALSE, col.names=FALSE, na="-9999")
 }
 
 
