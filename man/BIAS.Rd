@@ -4,7 +4,7 @@
 \alias{BIAS}
 \title{Relative bias}
 \usage{
-BIAS(sim, obs, ...)
+BIAS(sim, obs)
 }
 \arguments{
 \item{sim}{Simulated data series or data to be evaluated.}

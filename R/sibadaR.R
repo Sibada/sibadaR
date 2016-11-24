@@ -455,10 +455,12 @@ p_linetypes <- function() {
 #' @param obs Observed data series or data as reference.
 #' @return Root mean square error of sim and obs series.
 #' @export
-RMSE <- function(sim, obs, ...) {
-  return(sqrt(mean((sim - obs)**2, ...)))
+RMSE <- function(sim, obs) {
+  valid <- !is.na(sim) & !is.na(obs)
+  sim <- sim[valid]
+  obs <- obs[valid]
+  return(sqrt(mean((sim - obs)**2)))
 }
-
 
 #' Normailzed mean square error
 #' @description Calculate normailzed mean square error of two data series.
@@ -466,11 +468,12 @@ RMSE <- function(sim, obs, ...) {
 #' @param obs Observed data series or data as reference.
 #' @return Normailzed mean square error of sim and obs series.
 #' @export
-NMSE <- function(sim, obs, ...) {
-  obs = obs[!is.na(obs) & !is.na(sim)]
-  return(mean((obs - sim)**2, ...) / mean((obs - mean(obs))**2, ...) )
+NMSE <- function(sim, obs) {
+  valid <- !is.na(sim) & !is.na(obs)
+  sim <- sim[valid]
+  obs <- obs[valid]
+  return(mean((obs - sim)**2) / mean((obs - mean(obs))**2) )
 }
-
 
 #' Nash-Sutcliffe coefficient of efficiency
 #' @description Calculate Nash-Sutcliffe coefficient of efficiency of two data series.
@@ -478,8 +481,8 @@ NMSE <- function(sim, obs, ...) {
 #' @param obs Observed data series or data as reference.
 #' @return Nash-Sutcliffe coefficient of efficiency of sim and obs series.
 #' @export
-NSCE <- function(sim, obs, ...) {
-  return(1 - NMSE(sim, obs, ...))
+NSCE <- function(sim, obs) {
+  return(1 - NMSE(sim, obs))
 }
 
 #' Relative bias
@@ -488,8 +491,11 @@ NSCE <- function(sim, obs, ...) {
 #' @param obs Observed data series or data as reference.
 #' @return Relative bias of efficiency of sim and obs series.
 #' @export
-BIAS <- function(sim, obs, ...) {
-  return(mean(sim, ...)/mean(obs, ...) - 1)
+BIAS <- function(sim, obs) {
+  valid <- !is.na(sim) & !is.na(obs)
+  sim <- sim[valid]
+  obs <- obs[valid]
+  return(mean(sim)/mean(obs) - 1)
 }
 
 #' Statistics of each respective column

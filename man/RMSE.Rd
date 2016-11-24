@@ -4,7 +4,7 @@
 \alias{RMSE}
 \title{Root mean square error}
 \usage{
-RMSE(sim, obs, ...)
+RMSE(sim, obs)
 }
 \arguments{
 \item{sim}{Simulated data series or data to be evaluated.}
