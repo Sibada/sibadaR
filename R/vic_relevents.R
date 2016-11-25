@@ -27,10 +27,11 @@
 #'
 #' @export
 soil_convert <- function(soil_props, nlayer=3) {
-  if(ncol(x) < nlayer * 7) {
+  if(ncol(soil_props) < nlayer * 6) {
     stop("Soil properties is insufficient.")
   }
 
+  globalVariables(VIC_global_soil)
   soil_hydro_params <-  data.frame(matrix(0, nrow=nrow(soil_props), ncol=6*nlayer))
 
   for(l in 1:nlayer) {
@@ -138,7 +139,7 @@ soil_convert <- function(soil_props, nlayer=3) {
 #'
 #' @export
 create_soil_params <- function(coords, elev, soil_props, anprec, nlayer=3, avg_T=NA, quarzs=NA, organic=NA, Javg=NA) {
-  if(!(nrow(coords) == nrow(elev) & nrow(coords) == nrow(soil_props) & nrow(coords) == anprec)) {
+  if(!(nrow(coords) == length(elev) & nrow(coords) == nrow(soil_props) & nrow(coords) == length(anprec))) {
     stop("Input data has different rows.")
   }
   ncell <- nrow(coords)
