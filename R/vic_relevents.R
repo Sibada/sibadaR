@@ -637,7 +637,7 @@ points2grid <- function(points, x=NULL, y=NULL, val=NULL, out_file=NULL) {
 #' @param river_shp Path of the river shp file.
 #'
 #' @export
-plot_flow_direc <- function(direc, arc_code=TRUE, river_shp=NULL) {
+plot_flow_direc <- function(direc, arc_code=TRUE, river_shp=NULL, row_reverse=FALSE) {
   if(arc_code) {
     dir_code <- c(64, 128, 1, 2, 4, 8, 16, 32)
   } else {
@@ -648,6 +648,9 @@ plot_flow_direc <- function(direc, arc_code=TRUE, river_shp=NULL) {
     csize <- direc$cellsize
     xcor <- direc$xllcorner
     ycor <- direc$yllcorner
+    if(row_reverse) {
+      direc$grid <- direc$grid[nrow(direc$grid):1, ]
+    }
     direc <- grid2points(direc$grid, xcor=xcor, ycor=ycor, csize=csize)
   }
 
@@ -791,6 +794,38 @@ write_arc_grid <- function(grid, out_file, xcor=NULL, ycor=NULL, csize=NULL, NA_
             paste('NODATA_value  ', NA_value))
   writeLines(meta, out_file)
   write.table(griddata, out_file, append=TRUE, row.names=FALSE, col.names=FALSE, na="-9999")
+}
+
+#' Read ArcInfo ASCII grid data.
+#'
+#' @description Read the grid data from ArcInfo type ASCII file.
+#'
+#' @param grid_file A ArcInfo ASCII grid file.
+#' @return A grid data in list type, including nrows, ncols, xllcorner, yllcorner and cellsize.
+#'
+#' @export
+read_arc_grid <- function(grid_file) {
+  params <- strsplit(readLines(grid_file, 6), '\\s+')
+  xcor <- as.numeric(params[[3]][2])
+  ycor <- as.numeric(params[[4]][2])
+  csize <- as.numeric(params[[5]][2])
+  NA_value <- as.numeric(params[[6]][2])
+
+  grid <- read.table(grid_file, skip=6)
+  ncols <- ncol(grid)
+  nrows <- nrow(grid)
+
+  grid <- grid[nrows:1, ]
+  grid[grid == NA_value] <- NA
+
+  in_grid <- list(ncols=ncols,
+                  nrows=nrows,
+                  xllcorner=xcor,
+                  yllcorner=ycor,
+                  cellsize=csize,
+                  grid=grid)
+
+  return(in_grid)
 }
 
 

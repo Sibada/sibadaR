@@ -4,7 +4,8 @@
 \alias{plot_flow_direc}
 \title{Plot the flow direction of the flow direction data.}
 \usage{
-plot_flow_direc(direc, arc_code = TRUE, river_shp = NULL)
+plot_flow_direc(direc, arc_code = TRUE, river_shp = NULL,
+  row_reverse = FALSE)
 }
 \arguments{
 \item{direc}{Flow direction data created by create_flow_direction().}
