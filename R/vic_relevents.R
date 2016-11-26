@@ -828,6 +828,22 @@ read_arc_grid <- function(grid_file) {
   return(in_grid)
 }
 
+#' Read the rows and columns of grids of a basin from a rout data file.
+#'
+#' @description Read the rows and columns of gridcells of a basin from a rout data file
+#'              created by VIC Hime.
+#'
+#' @param data_path File path of the rou data file.
+#' @return A data frame contains the rows and columns of the gridcells in the basin.
+#'
+#' @export
+read_basin <- function(data_path) {
+  basin <- fromJSON(readLines(data_path))$basin
+  basin <- t(basin)
+  rownames(basin) <- 1:nrow(basin)
+  names(basin) <- c('col', 'row')
+  return(basin)
+}
 
 # direc_grid = set_direc(direc_grid, 19, 11, 1)
 # direc_grid = set_direc(direc_grid, 14, 3, 3)

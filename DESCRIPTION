@@ -25,7 +25,8 @@ Imports:
     gstat,
     sp,
     ncdf4,
-    shape
+    shape,
+    rjson
 Suggests:
     rvest,
     downloader
