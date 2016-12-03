@@ -356,6 +356,7 @@ create_veg_params <- function(pre_veg_params, out_file, aban=0.03) {
 #'
 #' @return A list including the meta parameters (num of rows and columns, size of the cells,
 #'         x and y corner) and the matrix of the flow direction data.
+#' @import ncdf4
 #'
 #' @export
 create_flow_direction <- function(flow_file, domain_file, arc_code=TRUE, diag_tsh=0.382) {
@@ -373,8 +374,8 @@ create_flow_direction <- function(flow_file, domain_file, arc_code=TRUE, diag_ts
 
   nrows <- length(glons)
   ncols <- length(glats)
-  csizex <- abs(mean(glons[2:nx]-glons[1:(nx-1)]))
-  csizey <- abs(mean(glats[2:ny]-glats[1:(ny-1)]))
+  csizex <- abs(mean(glons[2:nrows]-glons[1:(nrows-1)]))
+  csizey <- abs(mean(glats[2:ncols]-glats[1:(ncols-1)]))
 
   flow_nc <- nc_open(flow_file)
 
@@ -463,18 +464,22 @@ create_flow_direction <- function(flow_file, domain_file, arc_code=TRUE, diag_ts
 get_border <- function(nc, x, y, xsize, ysize) {
   flons <- nc$dim$x$vals
   flats <- nc$dim$y$vals
+  if(is.null(flons) | is.null(flats)) {
+    flons <- nc$dim$lon$vals
+    flats <- nc$dim$lat$vals
+  }
   l <- x - xsize/2
   r <- x + xsize/2
   t <- y + ysize/2
   b <- y - ysize/2
   cols <- which(flons > l & flons < r)
   rows <- which(flats > b & flats < t)
-  ncol <- length(cols)
-  nrow <- length(rows)
-  lf <- ncvar_get(nc, nc$var[[1]], c(cols[1], rows[1]), c(1, nrow))
-  rf <- ncvar_get(nc, nc$var[[1]], c(cols[ncol], rows[1]), c(1, nrow))
-  tf <- ncvar_get(nc, nc$var[[1]], c(cols[1], rows[1]), c(ncol, 1))
-  bf <- ncvar_get(nc, nc$var[[1]], c(cols[1], rows[120]), c(ncol, 1))
+  ncl <- length(cols)
+  nrw <- length(rows)
+  lf <- ncvar_get(nc, nc$var[[1]], c(cols[1], rows[1]), c(1, nrw))
+  rf <- ncvar_get(nc, nc$var[[1]], c(cols[ncl], rows[1]), c(1, nrw))
+  tf <- ncvar_get(nc, nc$var[[1]], c(cols[1], rows[1]), c(ncl, 1))
+  bf <- ncvar_get(nc, nc$var[[1]], c(cols[1], rows[nrw]), c(ncl, 1))
   lf[is.na(lf)] <- 0
   rf[is.na(rf)] <- 0
   tf[is.na(tf)] <- 0
@@ -487,9 +492,9 @@ get_border <- function(nc, x, y, xsize, ysize) {
   maxside <- which.max(maxs)
 
   if(maxside == 1 | maxside == 3) {
-    maxp <- maxps[maxside]/ncol
+    maxp <- maxps[maxside]/ncl
   } else {
-    maxp <- maxps[maxside]/nrow
+    maxp <- maxps[maxside]/nrw
   }
   return(c(maxside, maxp))
 }
@@ -516,7 +521,7 @@ grid2points <- function(grid, x=NULL, y=NULL, csize=NULL, xcor=NULL, ycor=NULL, 
 
   if(is.null(x) | is.null(y)) {
     x <- (1:ncol(grid)) * csize - csize/2 + xcor
-    y <- (nrow(grid):1) * csize - csize/2 + ycor
+    y <- (1:nrow(grid)) * csize - csize/2 + ycor
   }
   if (y_rev) y <- rev(y)
 
@@ -637,9 +642,10 @@ points2grid <- function(points, x=NULL, y=NULL, val=NULL, out_file=NULL) {
 #' @param direc Flow direction data created by create_flow_direction().
 #' @param arc_code If use the ArcInfo direction code.
 #' @param river_shp Path of the river shp file.
+#' @import shape maptools
 #'
 #' @export
-plot_flow_direc <- function(direc, arc_code=TRUE, river_shp=NULL, row_reverse=FALSE) {
+plot_flow_direc <- function(direc, xlim=NULL, ylim=NULL, arc_code=TRUE, river_shp=NULL, row_rev=FALSE) {
   if(arc_code) {
     dir_code <- c(64, 128, 1, 2, 4, 8, 16, 32)
   } else {
@@ -650,18 +656,29 @@ plot_flow_direc <- function(direc, arc_code=TRUE, river_shp=NULL, row_reverse=FA
     csize <- direc$cellsize
     xcor <- direc$xllcorner
     ycor <- direc$yllcorner
-    if(row_reverse) {
-      direc$grid <- direc$grid[nrow(direc$grid):1, ]
-    }
-    direc <- grid2points(direc$grid, xcor=xcor, ycor=ycor, csize=csize)
+    direc <- grid2points(direc$grid, xcor=xcor, ycor=ycor, csize=csize, y_rev=row_rev)
   }
 
   xticks <- sort(unique(direc[ , 1]))
   yticks <- sort(unique(direc[ , 2]))
-  xlabs <- round((xticks - min(xticks))/(xticks[2]-xticks[1]) + 1)
-  ylabs <- round((yticks - min(yticks))/(yticks[2]-yticks[1]) + 1)
+  cx <- xticks[2]-xticks[1]
+  cy <- yticks[2]-yticks[1]
+  xlabs <- round((xticks - min(xticks))/(cx) + 1)
+  ylabs <- round((yticks - min(yticks))/(cy) + 1)
 
-  plot(direc[ , 1:2], cex=0, xaxt='n', yaxt='n', xlab=NA, ylab=NA, asp=1)
+  if(is.null(xlim)) {
+    xlim <- c(min(xticks), max(xticks))
+  } else {
+    xlim <- xticks[xlim]
+  }
+  if(is.null(ylim)) {
+    ylim <- c(min(yticks), max(yticks))
+  } else {
+    ylim <- yticks[ylim]
+  }
+
+  plot(direc[ , 1:2], cex=0, xaxt='n', yaxt='n', xlim=xlim, ylim=ylim,
+       xlab=NA, ylab=NA, asp=1)
   axis(1, xticks, xlabs)
   axis(3, xticks, xlabs)
   axis(2, yticks, ylabs)
@@ -740,7 +757,7 @@ set_direc <- function(direc_grid, row, col, direc, arc_code=TRUE, keypad_dir=TRU
   }
   nrow <- direc_grid$nrows
   if(keypad_dir) di <- dir_map[direc] else di <- direc
-  direc_grid$grid[nrow-row+1, col] <- di
+  direc_grid$grid[row, col] <- di
   return(direc_grid)
 }
 
