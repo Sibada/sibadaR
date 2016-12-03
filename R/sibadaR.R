@@ -562,6 +562,7 @@ wt <- function(x, file = "", ...) {
 #' @param aurl Lianjie of benzi.
 #' @return Meiyou
 #' @description Hei hei hei
+#' @import rvest downloader
 #' @export
 get_nh <- function(aurl, dir = "", mustnewdir=FALSE) {
   lendir = nchar(dir)

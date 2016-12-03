@@ -4,7 +4,7 @@ Title: Sibada's accumulated R scripts for next probably use to avoid reinventing
     the wheel.
 Version: 0.1.0
 Author: Sibada
-Maintainer: Sibada <zrd2017@163.net>
+Maintainer: Sibada <zrd2017@163.com>
 Description: Before, I always write some pieces of code abitrarily and throw
     them away after use it, and no long later I fogot where they are or couldn't
     understand them when I want to do the same thing again such as draw a simple

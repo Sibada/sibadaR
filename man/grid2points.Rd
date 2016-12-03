@@ -5,7 +5,7 @@
 \title{Convert the grid data (save as matrix) to points.}
 \usage{
 grid2points(grid, x = NULL, y = NULL, csize = NULL, xcor = NULL,
-  ycor = NULL, NA_value = NULL)
+  ycor = NULL, NA_value = NULL, y_rev = FALSE)
 }
 \arguments{
 \item{grid}{A matrix of the gridded data.}

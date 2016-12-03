@@ -31,7 +31,6 @@ soil_convert <- function(soil_props, nlayer=3) {
     stop("Soil properties is insufficient.")
   }
 
-  globalVariables(VIC_global_soil)
   soil_hydro_params <-  data.frame(matrix(0, nrow=nrow(soil_props), ncol=6*nlayer))
 
   for(l in 1:nlayer) {
@@ -136,9 +135,10 @@ soil_convert <- function(soil_props, nlayer=3) {
 #' @return A data frame containing the soil parameters needed by the VIC model. Can
 #'         be write to file use write.table for use.
 #'
-#'
+#' @import gstat
 #' @export
 create_soil_params <- function(coords, elev, soil_props, anprec, nlayer=3, avg_T=NA, quarzs=NA, organic=NA, Javg=NA) {
+
   if(!(nrow(coords) == length(elev) & nrow(coords) == nrow(soil_props) & nrow(coords) == length(anprec))) {
     stop("Input data has different rows.")
   }
@@ -509,7 +509,7 @@ get_border <- function(nc, x, y, xsize, ysize) {
 #' @return A table of the points, including x and y coordinate and the values, converted
 #'         from the grid.
 #' @export
-grid2points <- function(grid, x=NULL, y=NULL, csize=NULL, xcor=NULL, ycor=NULL, NA_value=NULL) {
+grid2points <- function(grid, x=NULL, y=NULL, csize=NULL, xcor=NULL, ycor=NULL, NA_value=NULL, y_rev=FALSE) {
   if((is.null(x) | is.null(y)) & (is.null(csize) | is.null(xcor) | is.null(ycor))) {
     stop("Must provide x, y or csize, xcor, ycor")
   }
@@ -518,6 +518,8 @@ grid2points <- function(grid, x=NULL, y=NULL, csize=NULL, xcor=NULL, ycor=NULL, 
     x <- (1:ncol(grid)) * csize - csize/2 + xcor
     y <- (nrow(grid):1) * csize - csize/2 + ycor
   }
+  if (y_rev) y <- rev(y)
+
   xs <- c()
   ys <- c()
   vs <- c()
@@ -839,9 +841,9 @@ read_arc_grid <- function(grid_file) {
 #' @export
 read_basin <- function(data_path) {
   basin <- fromJSON(readLines(data_path))$basin
-  basin <- t(basin)
+  basin <- data.frame(t(data.frame(basin)))
   rownames(basin) <- 1:nrow(basin)
-  names(basin) <- c('col', 'row')
+  colnames(basin) <- c('col', 'row')
   return(basin)
 }
 
