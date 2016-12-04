@@ -783,8 +783,8 @@ write_arc_grid <- function(grid, out_file, xcor=NULL, ycor=NULL, csize=NULL, NA_
     if(is.null(grid$xllcorner) | is.null(grid$yllcorner) | is.null(grid$cellsize)) {
       stop("grid should have xllcorner, yllconer and cellsize.")
     }
-    ncols=ncol(grid)
-    nrows=nrow(grid)
+    ncols=ncol(grid$grid)
+    nrows=nrow(grid$grid)
     xllcorner <- grid$xllcorner
     yllcorner <- grid$yllcorner
     cellsize <- grid$cellsize
@@ -803,8 +803,7 @@ write_arc_grid <- function(grid, out_file, xcor=NULL, ycor=NULL, csize=NULL, NA_
     cellsize <- csize
     griddata <- grid
   }
-
-  griddata <- griddata[nrows:1, ]
+  griddata <- griddata[nrow(griddata):1, ]
   meta <- c(paste('ncols         ', round(ncols,  6)),
             paste('nrows         ', round(nrows,  6)),
             paste('xllcorner     ', round(xllcorner, 6)),
@@ -812,7 +811,7 @@ write_arc_grid <- function(grid, out_file, xcor=NULL, ycor=NULL, csize=NULL, NA_
             paste('cellsize      ', round(cellsize, 6)),
             paste('NODATA_value  ', NA_value))
   writeLines(meta, out_file)
-  write.table(griddata, out_file, append=TRUE, row.names=FALSE, col.names=FALSE, na="-9999")
+  write.table(griddata, out_file, append=TRUE, row.names=FALSE, col.names=FALSE, na=paste(NA_value))
 }
 
 #' Read ArcInfo ASCII grid data.
@@ -861,6 +860,111 @@ read_basin <- function(data_path) {
   basin <- data.frame(t(data.frame(basin)))
   rownames(basin) <- 1:nrow(basin)
   colnames(basin) <- c('col', 'row')
+  return(basin)
+}
+
+#' Find out the gridcells in the basin controled by the station.
+#'
+#' @description Offer the grid of flow direction and the site (row and column)
+#'              of the hydrological station and returns a table of the coordinates
+#'              of the gridcells in the basin controled by the station.
+#'
+#' @param dir Direction grid created by create_flow_direction() or a matrix.
+#' @param stn_col Column of the hydrological station
+#' @param stn_row Row of the hydrological station
+#' @param arc_code If use the ArcInfo direction code. Default True.
+#' @param xcor X coordinate of the corner of the grid. Should offered if dir is a matrix.
+#' @param ycor Y coordinate of the corner of the grid. Should offered if dir is a matrix.
+#' @param csize Size of the gridcells. Should offered if dir is a matrix.
+#' @param get_coords If return the coordinates of the gridcells of the basin, or return the rows and columns.
+#' @return A data frame contains the coordinates of the gridcells in the basin.
+#'
+#' @export
+detect_basin <- function(dir, stn_col, stn_row, arc_code=TRUE, xcor=NULL, ycor=NULL, csize=NULL, get_coords=FALSE) {
+  if(is.list(dir)) {
+    xcor <- dir$xllcorner
+    ycor <- dir$yllcorner
+    csize <- dir$cellsize
+    dir <- dir$grid
+  }
+
+  grid_satu <- dir
+  grid_satu[!is.na(grid_satu)] <- 0
+  grid_satu[stn_row, stn_col] <- 1
+
+  dx <- c()
+  dy <- c()
+  if (arc_code) {
+    dx[c(1,2,4,8,16,32,64,128)] <- c(1,1,0,-1,-1,-1,0,1)
+    dy[c(1,2,4,8,16,32,64,128)] <- c(0,-1,-1,-1,0,1,1,1)
+  } else {
+    dx[c(3,4,5,6,7,8,1,2)] <- c(1,1,0,-1,-1,-1,0,1)
+    dy[c(3,4,5,6,7,8,1,2)] <- c(0,-1,-1,-1,0,1,1,1)
+  }
+
+  bx <- c()
+  by <- c()
+
+  nr <- nrow(dir)
+  nc <- ncol(dir)
+  for(rw in 1:nr) {
+    for(cl in 1:nc) {
+      if(is.na(dir[rw, cl])) next
+      if(grid_satu[rw, cl] < 0) next
+
+      x <- cl
+      y <- rw
+
+      # Anti roop
+      len_det <- 10
+      prex <- rep(0, len_det)
+      prey <- rep(0, len_det)
+
+      while(TRUE) {
+        in_loop <- FALSE
+        for(p in 1:len_det){
+          if(prex[p] == x & prey[p] == y) {
+            in_loop <- TRUE
+          }
+        }
+        if(in_loop) {print(paste("Warn: loop detect at", x, ",", y))
+          grid_satu[y, x] <- -2
+          break
+        }
+
+        prex[1:(len_det-1)] <- prex[2:len_det]
+        prey[1:(len_det-1)] <- prey[2:len_det]
+
+        prex[5] <- x
+        prey[5] <- y
+
+        if(x < 1 | y < 1 | x > nc | y > nr) {
+          grid_satu[rw, cl] <- -1
+          break
+        }
+        if(is.na(dir[y, x]) | grid_satu[y, x] < 0) {
+          grid_satu[rw, cl] <- -1
+          break
+        }
+        if(grid_satu[y, x] == 1) {
+          grid_satu[rw, cl] <- 1
+          bx <- append(bx, cl)
+          by <- append(by, rw)
+          break
+        }
+        d <- dir[y, x]
+        nx <- x + dx[d]
+        ny <- y + dy[d]
+        x=nx
+        y=ny
+      }
+    }
+  }
+  if(get_coords) {
+    bx <- bx*csize+xcor-csize/2
+    by <- by*csize+ycor-csize/2
+  }
+  basin <- data.frame(x=bx, y=by)
   return(basin)
 }
 
