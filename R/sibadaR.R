@@ -741,3 +741,35 @@ group <- function(pattern, text, ...) {
     }, start, end)
   }, rgx, text)
 }
+
+#' Probability of the detection
+#' @description Probability of the detection, like precipitation.
+#' @param sim Series to be evaluated.
+#' @param obs Reference series.
+#' @param threshold Threshold to determind the event if happened. Default 0.
+#' @return POD of the evaluated series and the reference series.
+#' @export
+POD <- function(sim, obs, th=0) {
+  valid <- !is.na(sim) & !is.na(obs)
+  sim <- sim[valid]
+  obs <- obs[valid]
+  n11 <- length(sim[sim > th & obs > th])
+  n <- length(sim[obs > th])
+  return(n11 / n)
+}
+
+#' False alarm ratio
+#' @description False alarm ratio of the estimation, like precipitation.
+#' @param sim Series to be evaluated.
+#' @param obs Reference series.
+#' @param threshold Threshold to determind the event if happened. Default 0.
+#' @return FAR of the evaluated series and the reference series.
+#' @export
+FAR <- function(sim, obs, th=0) {
+  valid <- !is.na(sim) & !is.na(obs)
+  sim <- sim[valid]
+  obs <- obs[valid]
+  n01 <- length(sim[sim > th & obs <= th])
+  n <- length(sim[sim > th])
+  return(n01 / n)
+}
