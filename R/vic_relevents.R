@@ -551,54 +551,70 @@ grid2points <- function(grid, x=NULL, y=NULL, csize=NULL, xcor=NULL, ycor=NULL, 
 #'              and values to grids.
 #'
 #' @param grid A matrix of the gridded data.
-#' @param x Which column store the x cordinate.
+#' @param x Vector of x coordinates or hich column store the x cordinate.
 #' @param y Which column store the y cordinate.
 #' @param val Which column store the point value.
 #' @param out_file The output file path. If provide, it will write as an ArcInfo file
 #'                 without return.
+#' @param dec Precision of the coordinates.
 #'
 #' @return A list including the meta parameters (num of rows and columns, size of the cells,
 #'         x and y corner) and the matrix of the gridcell value.
 #' @export
-points2grid <- function(points, x=NULL, y=NULL, val=NULL, out_file=NULL) {
+points2grid <- function(points, x=NULL, y=NULL, val=NULL, out_file=NULL, dec=6) {
   acc <- 6
+  if(is.null(points) & (is.null(x) | is.null(y))) stop('Must provide points or x and y.')
 
   if(is.null(x)) {
     xs <- points[ , 1]
   } else {
-    xs <- points[ , x]
+    if(length(x) > 1) {
+      xs <- x
+    } else {
+      xs <- points[ , x]
+    }
   }
   if(is.null(y)) {
     ys <- points[ , 2]
   } else {
-    ys <- points[ , y]
+    if(length(y) == length(xs)) {
+      ys <- y
+    } else {
+      ys <- points[ , y[1]]
+    }
   }
-  print(val)
   if(is.null(val)) {
-    v <- points[ , 3]
+    if(ncol(points) > 2){
+      v <- points[ , 3]
+    } else {
+      v <- rep(0, length(xs))
+    }
   } else {
-    v <- points[ , val]
+    if(length(val) == length(xs)) {
+      v <- val
+    } else {
+      v <- points[ , val[1]]
+    }
   }
 
-  ux <- sort(unique(round(xs, acc)))
-  uy <- sort(unique(round(ys, acc)))
+  ux <- sort(unique(xs))
+  uy <- sort(unique(ys))
 
   ncol <- length(ux)
   nrow <- length(uy)
 
-  itvx <- unique(round(ux[2:ncol] - ux[1:(ncol-1)], acc))
-  itvy <- unique(round(uy[2:nrow] - uy[1:(nrow-1)], acc))
-  if(length(itvx) > 1 | length(itvy) > 1 |
-     itvx[1] != itvy[1]) {
+  itvx <- unique(ux[2:ncol] - ux[1:(ncol-1)])
+  itvy <- unique(uy[2:nrow] - uy[1:(nrow-1)])
+  if(sd(c(itvx, itvy)) > 10**(-dec)) {
     stop("Intervals of points are not equal. Cannot be gridded.")
   }
-  cellsize <- itvx
+  cellsize <- mean(c(itvx,itvy))
 
   xcor <- min(ux) - cellsize/2
   ycor <- min(uy) - cellsize/2
 
-  cols <- (xs - xcor + cellsize/2)/cellsize
-  rows <- (ys - ycor + cellsize/2)/cellsize
+  cols <- round((xs - xcor + cellsize/2)/cellsize)
+  rows <- round((ys - ycor + cellsize/2)/cellsize)
   rows <- max(rows) - rows + 1
 
   grid <- matrix(nrow=nrow, ncol=ncol)

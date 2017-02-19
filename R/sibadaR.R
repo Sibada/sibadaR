@@ -336,10 +336,10 @@ mk_mut_test <- function(x, plot = TRUE, out.value = FALSE, index=NULL, p.size=3,
   }
 
   conf.bound <- c(0)
-  if(max(mut.result) > 1.5) conf.bound <- append(blef.bond, 1.645)
-  if(min(mut.result) < -1.5) conf.bound <- append(blef.bond, -1.645)
-  if(max(mut.result) > 1.85) conf.bound <- append(blef.bond, 1.96)
-  if(min(mut.result) < -1.85) conf.bound <- append(blef.bond, -1.96)
+  if(max(mut.result) > 1.5) conf.bound <- append(conf.bound, 1.645)
+  if(min(mut.result) < -1.5) conf.bound <- append(conf.bound, -1.645)
+  if(max(mut.result) > 1.85) conf.bound <- append(conf.bound, 1.96)
+  if(min(mut.result) < -1.85) conf.bound <- append(conf.bound, -1.96)
 
     mut.melt <- melt(data.frame(mut.result))
     mut.melt$index <- ind
