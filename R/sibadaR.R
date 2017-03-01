@@ -196,6 +196,7 @@ blank.theme <- function() {
 #' @name sq.date
 #' @export
 sq.day <- function(from, to = NULL, len = NULL) {
+  if(is.numeric(from)) from <- as.character(from)
   ncfrom <- length(strsplit(from, "[-./\\s]")[[1]])
   from <- sub("[./\\s]","-",from)
   if(ncfrom == 2) {
@@ -206,6 +207,7 @@ sq.day <- function(from, to = NULL, len = NULL) {
     stop('Error: fromat of "from" incorrect.')
 
   if(!is.null(to)) {
+    if(is.numeric(to)) to <- as.character(to)
     ncto <- length(strsplit(to, "[-./\\s]")[[1]])
     to <- sub("[./\\s]","-",to)
     if(ncto == 2) {
@@ -223,7 +225,7 @@ sq.day <- function(from, to = NULL, len = NULL) {
     sq <- seq(from = as.Date(from), length.out = len, by = 'day')
 
   }else{
-    stop("Error: to and len shouldn't be NULL at same time.")
+    stop("Error: to and len should provide at lease one.")
   }
   sq
 }
@@ -231,16 +233,18 @@ sq.day <- function(from, to = NULL, len = NULL) {
 #' @rdname sq.date
 #' @export
 sq.month <- function(from, to = NULL, len = NULL) {
+  if(is.numeric(from)) from <- as.character(from)
   ncfrom <- length(strsplit(from, "[-./\\s]")[[1]])
   from <- sub("[./\\s]","-",from)
   if(ncfrom == 2) {
-    from <- paste(from, "12", sep = "-")
+    from <- paste(from, "01", sep = "-")
   }else if(ncfrom == 1) {
-    from <- paste(from, "12", "01", sep = "-")
+    from <- paste(from, "01", "01", sep = "-")
   }else if(ncfrom == 0 | ncfrom > 3)
     stop('Error: fromat of "from" incorrect.')
 
   if(!is.null(to)) {
+    if(is.numeric(to)) to <- as.character(to)
     ncto <- length(strsplit(to, "[-./\\s]")[[1]])
     to <- sub("[./\\s]","-",to)
     if(ncto == 2) {
@@ -264,6 +268,7 @@ sq.month <- function(from, to = NULL, len = NULL) {
 #' @rdname sq.date
 #' @export
 sq.year <- function(from, to = NULL, len = NULL) {
+  if(is.numeric(from)) from <- as.character(from)
   ncfrom <- length(strsplit(from, "[-./\\s]")[[1]])
   from <- sub("[./\\s]","-",from)
   if(ncfrom == 2) {
@@ -274,6 +279,7 @@ sq.year <- function(from, to = NULL, len = NULL) {
     stop('Error: fromat of "from" incorrect.')
 
   if(!is.null(to)) {
+    if(is.numeric(to)) to <- as.character(to)
     ncto <- length(strsplit(to, "[-./\\s]")[[1]])
     to <- sub("[./\\s]","-",to)
     if(ncto == 2) {
@@ -554,7 +560,7 @@ sd_col <- function(x, ...) {
 #' Other usage is as same as write.table.
 #' @export
 wt <- function(x, file = "", ...) {
-  write.table(x, file, row.names = FALSE, col.names = FALSE)
+  write.table(x, file, row.names = FALSE, col.names = FALSE, ...)
 }
 
 

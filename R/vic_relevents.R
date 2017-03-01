@@ -562,7 +562,7 @@ grid2points <- function(grid, x=NULL, y=NULL, csize=NULL, xcor=NULL, ycor=NULL, 
 #'         x and y corner) and the matrix of the gridcell value.
 #' @export
 points2grid <- function(points, x=NULL, y=NULL, val=NULL, out_file=NULL, dec=6) {
-  acc <- 6
+
   if(is.null(points) & (is.null(x) | is.null(y))) stop('Must provide points or x and y.')
 
   if(is.null(x)) {
@@ -600,15 +600,15 @@ points2grid <- function(points, x=NULL, y=NULL, val=NULL, out_file=NULL, dec=6) 
   ux <- sort(unique(xs))
   uy <- sort(unique(ys))
 
-  ncol <- length(ux)
-  nrow <- length(uy)
+  lux <- length(ux)
+  luy <- length(uy)
 
-  itvx <- unique(ux[2:ncol] - ux[1:(ncol-1)])
-  itvy <- unique(uy[2:nrow] - uy[1:(nrow-1)])
-  if(sd(c(itvx, itvy)) > 10**(-dec)) {
+  itvx <- unique(ux[2:lux] - ux[1:(lux-1)])
+  itvy <- unique(uy[2:luy] - uy[1:(luy-1)])
+  if(sd(c(itvx[1], itvy[1])) > 10**(-dec)) {
     stop("Intervals of points are not equal. Cannot be gridded.")
   }
-  cellsize <- mean(c(itvx,itvy))
+  cellsize <- mean(c(itvx[1],itvy[1]))
 
   xcor <- min(ux) - cellsize/2
   ycor <- min(uy) - cellsize/2
@@ -616,6 +616,9 @@ points2grid <- function(points, x=NULL, y=NULL, val=NULL, out_file=NULL, dec=6) 
   cols <- round((xs - xcor + cellsize/2)/cellsize)
   rows <- round((ys - ycor + cellsize/2)/cellsize)
   rows <- max(rows) - rows + 1
+
+  nrow <- max(rows)
+  ncol <- max(cols)
 
   grid <- matrix(nrow=nrow, ncol=ncol)
   for(p in 1:nrow(points)) {
