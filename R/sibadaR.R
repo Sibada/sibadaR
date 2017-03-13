@@ -182,6 +182,43 @@ blank.theme <- function() {
   th
 }
 
+# Assistant function for sq.date
+start.end.date <- function(ori.date, is.end = FALSE) {
+  if(is.numeric(ori.date)) ori.date <- as.character(ori.date)
+
+  date.cpns <- strsplit(ori.date, "[-./\\s\\\\]")[[1]] # Split can be "-", ".", "/", "\" and space.
+  num.cpns <- length(date.cpns)
+
+  if(num.cpns == 1) {
+    strlen <- nchar(date.cpns)
+    if(strlen >= 7) {
+      date.cpns <- c(substr(date.cpns, 1, strlen-4),
+                     substr(date.cpns, strlen-3, strlen-2),
+                     substr(date.cpns, strlen-1, strlen))
+      num.cpns <- 3
+    } else if(strlen >=5) {
+      date.cpns <- c(substr(date.cpns, 1, strlen-2),
+                     substr(date.cpns, strlen-1, strlen))
+      num.cpns <- 2
+    } else {
+      if(!is.end)
+        return(paste(date.cpns[1], "01", "01", sep = '-'))
+      return(paste(date.cpns[1], "12", "31", sep = '-'))
+    }
+  }
+
+  if(num.cpns >= 3)
+    return(paste(date.cpns[1], date.cpns[2], date.cpns[3], sep = '-'))
+  if(num.cpns == 2) {
+    date.start <- as.Date(paste(date.cpns[1], date.cpns[2], '01', sep = '-'))
+    if(!is.end)
+      return(date.start)
+    return(paste(date.cpns[1], date.cpns[2], days_in_month(date.start), sep = '-'))
+  }
+  if(num.cpns == 0)
+    stop(sprintf('Error: fromat of date "%s" is incorrect.', ori.date))
+}
+
 #' Quickly create a date sequence
 #'
 #' @description  Quickly create a date sequence without write a mountain of
@@ -196,34 +233,12 @@ blank.theme <- function() {
 #' @name sq.date
 #' @export
 sq.day <- function(from, to = NULL, len = NULL) {
-  if(is.numeric(from)) from <- as.character(from)
-  ncfrom <- length(strsplit(from, "[-./\\s]")[[1]])
-  from <- sub("[./\\s]","-",from)
-  if(ncfrom == 2) {
-    from <- paste(from, "01", sep = "-")
-  }else if(ncfrom == 1) {
-    from <- paste(from, "01", "01", sep = "-")
-  }else if(ncfrom == 0 | ncfrom > 3)
-    stop('Error: fromat of "from" incorrect.')
-
+  from <- start.end.date(from)
   if(!is.null(to)) {
-    if(is.numeric(to)) to <- as.character(to)
-    ncto <- length(strsplit(to, "[-./\\s]")[[1]])
-    to <- sub("[./\\s]","-",to)
-    if(ncto == 2) {
-      tmp <- as.Date(paste(to, "01", sep = "-"))
-      total_days <- days_in_month(tmp)
-      to <- paste(to, total_days, sep = "-")
-    }else if(ncto == 1) {
-      to <- paste(to, "12", "31", sep = "-")
-    }else if(ncto == 0 | to > 3)
-      stop('Error: fromat of "to" incorrect.')
-
+    to <- start.end.date(to, is.end = TRUE)
     sq <- seq(from = as.Date(from), to = as.Date(to), by = 'day')
-
   }else if(!is.null(len)){
     sq <- seq(from = as.Date(from), length.out = len, by = 'day')
-
   }else{
     stop("Error: to and len should provide at lease one.")
   }
@@ -233,34 +248,14 @@ sq.day <- function(from, to = NULL, len = NULL) {
 #' @rdname sq.date
 #' @export
 sq.month <- function(from, to = NULL, len = NULL) {
-  if(is.numeric(from)) from <- as.character(from)
-  ncfrom <- length(strsplit(from, "[-./\\s]")[[1]])
-  from <- sub("[./\\s]","-",from)
-  if(ncfrom == 2) {
-    from <- paste(from, "01", sep = "-")
-  }else if(ncfrom == 1) {
-    from <- paste(from, "01", "01", sep = "-")
-  }else if(ncfrom == 0 | ncfrom > 3)
-    stop('Error: fromat of "from" incorrect.')
-
+  from <- start.end.date(from)
   if(!is.null(to)) {
-    if(is.numeric(to)) to <- as.character(to)
-    ncto <- length(strsplit(to, "[-./\\s]")[[1]])
-    to <- sub("[./\\s]","-",to)
-    if(ncto == 2) {
-      to <- paste(to, "01", sep = "-")
-    }else if(ncto == 1) {
-      to <- paste(to, "12", "01", sep = "-")
-    }else if(ncto == 0 | to > 3)
-      stop('Error: fromat of "to" incorrect.')
-
+    to <- start.end.date(to, is.end = TRUE)
     sq <- seq(from = as.Date(from), to = as.Date(to), by = 'month')
-
   }else if(!is.null(len)){
     sq <- seq(from = as.Date(from), length.out = len, by = 'month')
-
   }else{
-    stop("Error: to and len shouldn't be NULL at same time.")
+    stop("Error: to and len should provide at lease one.")
   }
   sq
 }
@@ -268,34 +263,14 @@ sq.month <- function(from, to = NULL, len = NULL) {
 #' @rdname sq.date
 #' @export
 sq.year <- function(from, to = NULL, len = NULL) {
-  if(is.numeric(from)) from <- as.character(from)
-  ncfrom <- length(strsplit(from, "[-./\\s]")[[1]])
-  from <- sub("[./\\s]","-",from)
-  if(ncfrom == 2) {
-    from <- paste(from, "01", sep = "-")
-  }else if(ncfrom == 1) {
-    from <- paste(from, "01", "01", sep = "-")
-  }else if(ncfrom == 0 | ncfrom > 3)
-    stop('Error: fromat of "from" incorrect.')
-
+  from <- start.end.date(from)
   if(!is.null(to)) {
-    if(is.numeric(to)) to <- as.character(to)
-    ncto <- length(strsplit(to, "[-./\\s]")[[1]])
-    to <- sub("[./\\s]","-",to)
-    if(ncto == 2) {
-      to <- paste(to, "01", sep = "-")
-    }else if(ncto == 1) {
-      to <- paste(to, "01", "01", sep = "-")
-    }else if(ncto == 0 | to > 3)
-      stop('Error: fromat of "to" incorrect.')
-
+    to <- start.end.date(to, is.end = TRUE)
     sq <- seq(from = as.Date(from), to = as.Date(to), by = 'year')
-
   }else if(!is.null(len)){
     sq <- seq(from = as.Date(from), length.out = len, by = 'year')
-
   }else{
-    stop("Error: to and len shouldn't be NULL at same time.")
+    stop("Error: to and len should provide at lease one.")
   }
   sq
 }
@@ -311,7 +286,7 @@ sq.year <- function(from, to = NULL, len = NULL) {
 #' @param l.size Line size of plot.
 #' @return Plot or values of UF and UB series from M-K mutation test.
 #' @export
-mk_mut_test <- function(x, plot = TRUE, out.value = FALSE, index=NULL, p.size=3, l.size=0.6) {
+MK_mut_test <- function(x, plot = TRUE, out.value = FALSE, index=NULL, p.size=3, l.size=0.6) {
   if(!is.null(dim(x)) && ncol(x) > 1){
     x <- x[ , 1]
     warning("x is not a single series, and now only use the first column.")
@@ -566,11 +541,15 @@ wt <- function(x, file = "", ...) {
 
 #' Get benzi from nh zhan.
 #' @param aurl Lianjie of benzi.
-#' @return Meiyou
+#' @return Nai
 #' @description Hei hei hei
 #' @import rvest downloader
 #' @export
 get_nh <- function(aurl, dir = "", mustnewdir=FALSE) {
+  hasrvest <- require('rvest')
+  hasdwer <- require('downloader')
+  if(!hasrvest | !hasdwer) stop('rvesr or downloader was not installed.')
+
   lendir = nchar(dir)
   if(dir != "" & substr(dir, lendir, lendir) != "/")
     dir = paste(dir, "/", sep="")
