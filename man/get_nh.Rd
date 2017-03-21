@@ -10,7 +10,7 @@ get_nh(aurl, dir = "", mustnewdir = FALSE)
 \item{aurl}{Lianjie of benzi.}
 }
 \value{
-Meiyou
+Nai
 }
 \description{
 Hei hei hei

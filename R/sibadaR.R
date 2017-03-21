@@ -183,7 +183,7 @@ blank.theme <- function() {
 }
 
 # Assistant function for sq.date
-start.end.date <- function(ori.date, is.end = FALSE) {
+todate <- function(ori.date, is.end = FALSE) {
   if(is.numeric(ori.date)) ori.date <- as.character(ori.date)
 
   date.cpns <- strsplit(ori.date, "[-./\\s\\\\]")[[1]] # Split can be "-", ".", "/", "\" and space.
@@ -233,9 +233,9 @@ start.end.date <- function(ori.date, is.end = FALSE) {
 #' @name sq.date
 #' @export
 sq.day <- function(from, to = NULL, len = NULL) {
-  from <- start.end.date(from)
+  from <- todate(from)
   if(!is.null(to)) {
-    to <- start.end.date(to, is.end = TRUE)
+    to <- todate(to, is.end = TRUE)
     sq <- seq(from = as.Date(from), to = as.Date(to), by = 'day')
   }else if(!is.null(len)){
     sq <- seq(from = as.Date(from), length.out = len, by = 'day')
@@ -248,9 +248,9 @@ sq.day <- function(from, to = NULL, len = NULL) {
 #' @rdname sq.date
 #' @export
 sq.month <- function(from, to = NULL, len = NULL) {
-  from <- start.end.date(from)
+  from <- todate(from)
   if(!is.null(to)) {
-    to <- start.end.date(to, is.end = TRUE)
+    to <- todate(to, is.end = TRUE)
     sq <- seq(from = as.Date(from), to = as.Date(to), by = 'month')
   }else if(!is.null(len)){
     sq <- seq(from = as.Date(from), length.out = len, by = 'month')
@@ -263,9 +263,9 @@ sq.month <- function(from, to = NULL, len = NULL) {
 #' @rdname sq.date
 #' @export
 sq.year <- function(from, to = NULL, len = NULL) {
-  from <- start.end.date(from)
+  from <- todate(from)
   if(!is.null(to)) {
-    to <- start.end.date(to, is.end = TRUE)
+    to <- todate(to, is.end = TRUE)
     sq <- seq(from = as.Date(from), to = as.Date(to), by = 'year')
   }else if(!is.null(len)){
     sq <- seq(from = as.Date(from), length.out = len, by = 'year')
