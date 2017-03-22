@@ -758,3 +758,42 @@ FAR <- function(sim, obs, th=0) {
   n <- length(sim[sim > th])
   return(n01 / n)
 }
+
+#' Save urls to be download as meta4 format.
+#' @description Save the url list of a series of file to be downloaded as
+#'              .meta4 format for downthemall. No one can doubt that downthemall
+#'              is a good add-on to make download more eaiser, convinient and
+#'              managable. However, there are also some shortcommings to
+#'              make it shit, for example, it would automatically remove the contents
+#'              after square brackets without any consults when batch import
+#'              url list, but those contents are necessary for some file urls such as
+#'              OpenDAP. This function is to save the urls as meta4 file so
+#'              that downthemall could not amend the urls when import them to
+#'              the queue.
+#' @param urls Url list of the file to be downloaded, such as OpenDAP.
+#' @param file either a character string naming a file or a connection open
+#'             for writing. "" indicates output to the console.
+#'
+#' @export
+write.meta4 <- function(urls, file = "") {
+  urls <- paste(urls)
+  filenames <- sapply(strsplit(urls,'[/?]'), function(x) {
+    pfn <- x[grepl("\\.",x)]
+    if(length(pfn) >= 2) {
+      pfn[2]
+    } else {
+      pfn[1]
+    }
+  })
+  mtlg <- paste('<file name="',
+               filenames,'" a0:num="',1:length(urls),
+               '" a0:startDate="1488501103335"><url priority="100" a0:usable="',
+               urls, '">', urls, '</url></file>')
+  mtlh <- paste('<?xml version="1.0"?><metalink xmlns="urn:ietf:params:xml:ns:metalink" ',
+                'version="4.0" a0:version="3.0.8" ',
+                'xmlns:a0="http://www.downthemall.net/properties#"><generator>',
+                'DownThemAll!/3.0</generator><published>',
+                'Sat, 01 October 1949 00:08:00 GMT</published>', sep = '')
+  mtl <- c(mtlh, mtlg, '</metalink>')
+  write.table(mtl, file, quote = FALSE, col.names = F, row.names = F)
+}
