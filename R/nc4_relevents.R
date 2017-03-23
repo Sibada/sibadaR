@@ -491,3 +491,124 @@ read_ncvar <- function(file, var = NULL, from = NULL, to = NULL, dims = NULL,
 #  })
 #}
 
+nc_combine <- function(file_list, out_file, combine_dim = 'time', meta_from = file_list[1],
+                       from = NULL, to = NULL, compression = 1) {
+
+  # Check params.
+  if(is.numeric(from) & is.numeric(to) && from > to) stop('from must not larger than to.')
+
+  # Getting meta data.
+  ncf <- nc_open(meta_from)
+  global_attr <- ncatt_get(ncf, 0)
+
+  dim_names <- names(ncf$dim)
+  dim_attrs <- list()
+  for(dim_name in dim_names)
+    dim_attrs[[dim_name]] <- ncatt_get(ncf, dim_name)
+
+  names(dim_attrs) <- dim_names
+
+  dim_vals <- list()
+  for(dim_name in dim_names)
+    dim_vals[[dim_name]] <- ncf$dim[[dim_name]]$vals
+
+  # Getting Var informations.
+  var_names <- names(ncf$var)
+
+  var_dims <- list()
+  var_attrs <- list()
+  for(var_name in var_names) {
+    var_dims[[var_name]] <-
+      sapply(ncf$var[[var_name]]$dim, function(x) x$name)
+
+    var_attrs[[var_name]] <- ncatt_get(ncf, var_name)
+  }
+
+  # Get where is the dimention that to be combine.
+  cd_site <- sapply(var_dims, function(x) which(x == combine_dim))
+
+  nc_close(ncf)
+
+  # Check each nc file and get the total length.
+  len_get <- c()
+  from_get <- c()
+  cdim_val <- c()
+  from_put <- c()
+  ifrom_put <- 1
+  for(fn in file_list) {
+    ncf <- nc_open(fn)
+    # TODO Check the size of each var of each files.
+
+    cd_len <- ncf$dim[[combine_dim]]$len
+    ifrom <- from; ito <- to
+    if(!is.numeric(ifrom) || ifrom < 1) ifrom <- 1
+    if(!is.numeric(ito) || ito > cd_len) ito <- cd_len
+    if(ifrom > cd_len) ifrom <- cd_len
+    if(ito < 1) ito <- 1
+    len_get <- append(len_get, ito - ifrom + 1)
+    from_get <- append(from_get, ifrom)
+    cdim_val <- append(cdim_val, ncf$dim[[combine_dim]]$vals[ifrom:ito])
+
+    from_put <- append(from_put, ifrom_put)
+    ifrom_put <- ifrom_put + ito - ifrom + 1
+
+    nc_close(ncf)
+  }
+
+  dim_vals[[combine_dim]] <- cdim_val
+
+  # Create assemble nc file.
+  adims <- list()
+  for(dim_name in dim_names) {
+    adim <- ncdim_def(dim_name, 'None', dim_vals[[dim_name]])
+    adims[[dim_name]] <- adim
+  }
+
+  adatas <- list()
+  for(var_name in var_names) {
+    adata <- ncvar_def(var_name, "None", adims[ var_dims[[var_name]] ],
+                       compression = compression)
+    adatas[[var_name]] <- adata
+  }
+
+  print(sprintf('Creating file %s', out_file))
+
+  ncfa <- nc_create(out_file, adatas)
+
+  # Set each attributes of meta data.
+  for(attr_name in names(global_attr))
+    ncatt_put(ncfa, 0, attr_name, global_attr[[attr_name]])
+
+  for(var_name in var_names) {
+    for(attr_name in names(var_attrs[[var_name]]))
+      ncatt_put(ncfa, var_name, attr_name, var_attrs[[var_name]][[attr_name]])
+  }
+
+  for(dim_name in dim_names) {
+    for(attr_name in names(dim_attrs[[dim_name]]))
+      ncatt_put(ncfa, dim_name, attr_name, dim_attrs[[dim_name]][[attr_name]])
+  }
+
+
+  # Write in data from each original nc file.
+  for(i in 1:length(file_list)) {
+    fn <- file_list[i]
+    ncf <- nc_open(fn)
+    print(paste('Writing', fn))
+    for(var_name in var_names) {
+
+      pstart <- ostart <- rep(1, length(var_dims[[var_name]]))
+      ostart[cd_site[[var_name]]] = from_get[i]
+      pstart[cd_site[[var_name]]] = from_put[i]
+      olen <- rep(-1, length(var_dims[[var_name]]))
+      olen[cd_site[[var_name]]] = len_get[i]
+
+      # Write in data.
+      odata <- ncvar_get(ncf, var_name, ostart, olen)
+      ncvar_put(ncfa, var_name, odata, pstart, olen)
+    }
+    nc_close(ncf)
+  }
+
+  nc_close(ncfa)
+}

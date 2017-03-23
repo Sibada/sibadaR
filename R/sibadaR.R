@@ -6,28 +6,45 @@
 #   Test Package:              'Ctrl + Shift + T'
 
 # Inner function
+
 mk <- function (x) {
   x <- as.numeric(x)
-  y <- x[!is.na(x)]
-  n <- length(y)
-  r <- sapply(1:n, function(i) sum(y[1:i] < y[i]))
-  s <- sum(r)
-  E <- n * (n + 1) / 4
-  Var <- n * (n - 1) * (2*n + 5) / 72
-  MK.value <- (s - E) / sqrt(Var)
-  p.value <- abs(pnorm(MK.value)-pnorm(-MK.value))
-  c(MK.value = MK.value, p.value = p.value)
+  x <- x[!is.na(x)]
+  n <- length(x)
+  S <- sum(sapply(1:n, function(k) sum(sign(x[k:n] - x[k])) ) )
+  ties <- rle(sort(x))$lengths
+  tfix <- sum(ties * (ties - 1) * (2*ties + 5) )
+  varS <- (n * (n - 1) * (2*n + 5) - tfix) / 18
+  Z <- (S - sign(S)) / sqrt(varS)
+  Z
+}
+
+# p.value <- 1 - 2 * pnorm(-abs(Z))
+
+senslope <- function (x) {
+  x <- as.numeric(x)
+  t <- 1:length(x)
+  t <- t[!is.na(x)]
+  x <- x[!is.na(x)]
+  n <- length(x)
+  sen <- c()
+  #senr <- c()
+  for(k in 2:n) {
+    kslo <- (x[k] - x[1:(k-1)]) / (t[k] - t[1:(k-1)])
+    sen <- append(sen, kslo)
+    #senr <- append(senr, kslo/x[1:(k-1)])
+  }
+  senslo <- median(sen)
+  #senslor <- median(senr)
+  senslo
 }
 
 mk_U <- function(x) {
   n <- length(x)
-  r <- s <- 0
-  for(i in 2:n){
-    r[i] <- length((1:i)[x[1:i] < x[i]])
-    s[i] <- s[i-1] + r[i]
-  }
+  r <- sapply(1:n, function(k)sum(x[1:k] < x[k]))
+  s <- cumsum(r)
   k <- 1:n
-  U <- (s - k*(k+1)/4) / sqrt(k*(k-1)*(2*k+5)/72)
+  U <- (s - k*(k - 1)/4) / sqrt((k * (k-1) * (2*k+5))/72)
   U[1] <- 0
   return(U)
 }
@@ -286,10 +303,11 @@ sq.year <- function(from, to = NULL, len = NULL) {
 #' @param l.size Line size of plot.
 #' @return Plot or values of UF and UB series from M-K mutation test.
 #' @export
-MK_mut_test <- function(x, plot = TRUE, out.value = FALSE, index=NULL, p.size=3, l.size=0.6) {
-  if(!is.null(dim(x)) && ncol(x) > 1){
+MK_mut_test <- function(x, plot = TRUE, out.value = FALSE, index = NULL, p.size = 3, l.size = 0.6) {
+  if(!is.null(dim(x))){
+    if(ncol(x) > 1)
+      warning("x is not a single series, and now only use the first column.")
     x <- x[ , 1]
-    warning("x is not a single series, and now only use the first column.")
   }
   n <- length(x)
   isxts <- FALSE
@@ -322,8 +340,7 @@ MK_mut_test <- function(x, plot = TRUE, out.value = FALSE, index=NULL, p.size=3,
   if(max(mut.result) > 1.85) conf.bound <- append(conf.bound, 1.96)
   if(min(mut.result) < -1.85) conf.bound <- append(conf.bound, -1.96)
 
-    mut.melt <- melt(data.frame(mut.result))
-    mut.melt$index <- ind
+  mut.melt <- melt(data.frame(index = ind, mut.result), id.vars = 'index')
 
   mut.plot <- ggplot(data=mut.melt, aes(x=index, y=value, group=variable)) +
     geom_line(aes(linetype=variable), size=l.size) +
