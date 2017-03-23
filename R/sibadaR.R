@@ -7,8 +7,10 @@
 
 # Inner function
 
-mk <- function (x) {
+mk <- function (x, sen.slope = TRUE, p.value = TRUE) {
   x <- as.numeric(x)
+  t <- 1:length(x)
+  t <- t[!is.na(x)]
   x <- x[!is.na(x)]
   n <- length(x)
   S <- sum(sapply(1:n, function(k) sum(sign(x[k:n] - x[k])) ) )
@@ -16,27 +18,21 @@ mk <- function (x) {
   tfix <- sum(ties * (ties - 1) * (2*ties + 5) )
   varS <- (n * (n - 1) * (2*n + 5) - tfix) / 18
   Z <- (S - sign(S)) / sqrt(varS)
-  Z
-}
+  mk.results <- c(Z = Z)
+  if(p.value)
+    mk.results <- c(mk.results, p = 1 - 2 * pnorm(-abs(Z)))
 
-# p.value <- 1 - 2 * pnorm(-abs(Z))
-
-senslope <- function (x) {
-  x <- as.numeric(x)
-  t <- 1:length(x)
-  t <- t[!is.na(x)]
-  x <- x[!is.na(x)]
-  n <- length(x)
-  sen <- c()
-  #senr <- c()
-  for(k in 2:n) {
-    kslo <- (x[k] - x[1:(k-1)]) / (t[k] - t[1:(k-1)])
-    sen <- append(sen, kslo)
-    #senr <- append(senr, kslo/x[1:(k-1)])
+  if(sen.slope){
+    sen <- c()
+    #senr <- c()
+    for(k in 2:n) {
+      kslo <- (x[k] - x[1:(k-1)]) / (t[k] - t[1:(k-1)])
+      sen <- append(sen, kslo)
+      #senr <- append(senr, kslo/x[1:(k-1)])
+    }
+    mk.results <- c(mk.results, sen.slope = median(sen))
   }
-  senslo <- median(sen)
-  #senslor <- median(senr)
-  senslo
+  mk.results
 }
 
 mk_U <- function(x) {
@@ -44,7 +40,15 @@ mk_U <- function(x) {
   r <- sapply(1:n, function(k)sum(x[1:k] < x[k]))
   s <- cumsum(r)
   k <- 1:n
-  U <- (s - k*(k - 1)/4) / sqrt((k * (k-1) * (2*k+5))/72)
+  var <- sapply(k, function(ki) {
+    tf <- rle(sort(x[1:ki]))$lengths
+    (ki * (ki-1) * (2*ki+5) - sum(tf * (tf-1) * (2*tf+5)))/72
+  })
+  E <- sapply(k, function(ki) {
+    tf <- rle(sort(x[1:ki]))$lengths
+    (ki*(ki - 1) - sum(tf * (tf-1)))/4
+  })
+  U <- (s - E) / sqrt(var)
   U[1] <- 0
   return(U)
 }
@@ -109,18 +113,22 @@ season.apply <- function(x, INDEX, FUN, ...)
 #' Mann-Kendall trend test
 #'
 #' @param x A time series (vector or matrix) to be test.
-#' @return A list include M-K static value(MK.value) and significance value(p.value)
-#'         if x is a vector, or a matrix to record MK.value and p.value for each column of x.
+#' @param sen.slope Output Sen's slope or not. Default TRUE.
+#' @param p.value Output significance confidence value or not. Default TRUE.
+#' @return A named vector include M-K static value(Z), Sen's slope value
+#'         (sen.slope) and significance confidence value (p) when x is
+#'         a vector, or a matrix to record Z, sen.slope and p for
+#'         each column of x.
 #'
 #' @export
-MK_test <- function (x) {
+MK_test <- function (x, sen.slope = TRUE, p.value = TRUE) {
+  mk
   if (is.null(dim(x)))
-    return(as.list(mk(x)))
+    return(mk(x))
   if (ncol(x) == 1)
     return(as.list(mk(x[, 1])))
   return(t(apply(x, 2, mk)))
 }
-
 
 #' Apply function over seasons for xts object.
 #'

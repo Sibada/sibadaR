@@ -4,14 +4,20 @@
 \alias{MK_test}
 \title{Mann-Kendall trend test}
 \usage{
-MK_test(x)
+MK_test(x, sen.slope = TRUE, p.value = TRUE)
 }
 \arguments{
 \item{x}{A time series (vector or matrix) to be test.}
+
+\item{sen.slope}{Output Sen's slope or not. Default TRUE.}
+
+\item{p.value}{Output significance confidence value or not. Default TRUE.}
 }
 \value{
-A list include M-K static value(MK.value) and significance value(p.value)
-        if x is a vector, or a matrix to record MK.value and p.value for each column of x.
+A named vector include M-K static value(Z), Sen's slope value
+        (sen.slope) and significance confidence value (p) when x is
+        a vector, or a matrix to record Z, sen.slope and p for
+        each column of x.
 }
 \description{
 Mann-Kendall trend test
