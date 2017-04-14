@@ -61,6 +61,42 @@ find_dim_time <- function(ncfile, var = NULL) {
   }
 }
 ############################################################################
+############################################################################
+############################################################################
+
+#' Show the variables or their dimensions of a netCDF file.
+#'
+#' @description Show the variables or their dimensions of a netCDF file.
+#'
+#' @param file Path of the nc file.
+#' @param show.dim If is TRUE, also list out the dimensions of each variables.
+#'                 Default FALSE.
+#'
+#' @return A vector of the variable names.
+#'
+#' @export
+list_ncvar <- function(file, show.dim = FALSE) {
+  nccon <- nc_open(file)
+  tryCatch({
+    vars <- names(nccon$var)
+    if(show.dim) {
+      varinfos <- c()
+      maxlen <- max(nchar(vars))
+      for(var in vars) {
+        dims <- sapply(nccon$var[[var]]$dim, function(x) x$name)
+        diminfo <- paste(dims, collapse = '\t')
+        if(nchar(var) < maxlen - 5)
+          var <- paste(var, '   ')
+        varinfo <- paste(var, ':', diminfo, sep='\t')
+        varinfos <- c(varinfos, varinfo)
+        message(varinfo)
+      }
+    }
+  }, finally = {
+    nc_close(nccon)
+  })
+  vars
+}
 
 
 #' Quick build netCDF typical dimensions.
@@ -141,9 +177,14 @@ ncdim_time <- function(time, name = 'time', ...) {
 #' @name nctime
 #' @export
 time2num <- function(time, since = time[1], freq = NULL, tz = 'UTC') {
-  time <- as.POSIXct(time)
-  since <- as.POSIXct(since)
-  tnum <- as.numeric(time - since)
+  if(is.character(since) && grepl('since', since)) {
+    units_esm <- strsplit(since, '\\ssince\\s')[[1]]
+    since <- units_esm[2]
+  }
+  since <- as.POSIXct(since, tz = "UTC")
+
+  time <- as.POSIXct(time, tz = 'UTC')
+  tnum <- as.numeric(time) - as.numeric(since)
 
   if(is.null(freq)) {
     if(length(time) == 1) {
@@ -154,13 +195,13 @@ time2num <- function(time, since = time[1], freq = NULL, tz = 'UTC') {
         freq <- 'year'
       } else if(numintv >= 259200){
         freq <- 'month'
-      } else if(numintv >= 86400){
+      } else if(numintv >= 86399){
         freq <- 'day'
         intv <- 86400
-      } else if(numintv >= 3600){
+      } else if(numintv >= 3599){
         freq <- 'hour'
         intv <- 3600
-      } else if(numintv >= 60){
+      } else if(numintv >= 59){
         freq <- 'minute'
         intv <- 60
       } else {
@@ -208,7 +249,7 @@ num2time <- function(time, units) {
     stmonth <- as.numeric(from_date[2])
     styear <- as.numeric(from_date[1])
 
-    if(freq == 'year') {
+    if(freq == 'years') {
       out_years <- styear + time
       ts <- as.Date(paste(out_years, stmonth, '01', sep='-'))
     } else {
@@ -479,136 +520,298 @@ read_ncvar <- function(file, var = NULL, from = NULL, to = NULL, dims = NULL,
   return(val)
 }
 
-#write_ncvar <- function(val, file, varname, dims = NULL,) {
-#  nccon <- nc_open(file, write = TRUE)
 
-#  tryCatch ({
+#' Write data to netCDF file.
+#'
+#' @description Write data to netCDF file.
+#'
+#' @param val Values to be write to the file. Should be matrix or array.
+#' @param file Path of the netCDF file to be write.
+#' @param var Name of the variable to be write. If the variable is not exist and
+#'            the parameter "newvar" set to TRUE then the variable would be create.
+#' @param dims A vector of string to determine the dimensions of the variable
+#'             when create a new variable. If some dimensions was not determine,
+#'             it would atuomatically find a dimension that fit it.
+#' @param newvar If is TRUE, if the variable is not exist, it would create a
+#'               new variable. Default FALSE.
+#'
+#' @param units Units of the new variable if the new variable is created.
+#'
+#' @export
+write_ncvar <- function(val, file, var, dims = c(), newvar = FALSE, units = 'NULL') {
+  if(!is.character(var))
+    stop("Name of variable not provide or incorrect.")
+  ncf <- nc_open(file, write = TRUE)
+  tryCatch({
+    vars <- names(ncf$var)
+    if(!(var %in% vars) & !newvar)
+      stop(sprintf('Variable "%s" is not exist in the nc file.', var))
+
+    if(!(var %in% vars) & newvar) {
+      vdims <- rep(NA, length(dim(val)))
+      dimlens <- sapply(ncf$dim, function(x)x$len)
+      dimnames <- names(dimlens)
+      vdimlens <- dim(val)
+
+      for(vdim in dims) {
+        if(!(vdim %in% dimnames))
+          stop(sprintf('Dimension "%s" is not exist in the nc file.', vdim))
+        dimsite <- which(vdimlens == dimlens[vdim])
+        if(length(dimsite) == 0)
+          stop(sprintf('Dimension "%s" (length %d) can not match any dim of val.',
+                       vdim, dimlens[vdim]))
+        vdims[dimsite][which(is.na(vdims[dimsite]))[1]] <- vdim
+      }
+      for(i in 1:length(vdims)) {
+        if(!is.na(vdims[i])) next
+        dimlen <- dim(val) [i]
+        dimsite <- which(dimlen == dimlens)
+        if(length(dimsite) == 0)
+          stop(sprintf("The No.%d of the dim of the val (length %d) does not match any dimension of the nc file.", i, dimlen))
+        if(length(dimsite) > 1) {
+          dimsite <- dimsite[1]
+          warning(sprintf('The No.%d of the dim of the val (length %d) matchs more than 1 dimension.
+                          Now select dimension "%s" to match it.', i, dimlen, dimnames[dimsite]))
+        }
+        vdims[i] <- dimnames[dimsite]
+      }
+      newdim <- list()
+      for(vdim in vdims) {
+        newdim[[vdim]] <- ncf$dim[[vdim]]
+      }
+      newvar <- ncvar_def(var, units, newdim)
+      ncvar_add(ncf, newvar)
+
+      # The variable could not be write just after be added.
+      # Should close the file and reopen.
+      nc_close(ncf)
+      ncf <- nc_open(file, write = TRUE)
+    }
+    ncvar_put(ncf, var, val)
+
+  }, finally = {
+    nc_close(ncf)
+  })
+}
 
 
-#  },
-#  finally = {
-#    nc_close(nccon)
-#  })
-#}
+#' Combine several netCDF file by time.
+#'
+#' @description Combine several netCDF file by time. Each netCDF file should have the
+#'              same dimensions and variables.
+#'
+#' @param fs A vector of string. File paths of each nc file to be combine.
+#' @param out_file Output path of the new combined nc file.
+#' @param from A vector indicating the start of the time range to be combine of each nc file.
+#' @param to A vector indicating the end of the time range to be combine of each nc file.
+#' @param datum_nc Which nc file to be regard as the datum, i.e. the attributes, dimensions
+#'                 and variable names would inherit from it.
+#'
+#' @param compression The same parameters of function ncvar_def. Define the compression level
+#'                    of the nc file.
+#'
+#' @export
+nc_combine_time <- function(fs, out_file, from = NULL, to = NULL, datum_nc = 1, compression = NA) {
 
-nc_combine <- function(file_list, out_file, combine_dim = 'time', meta_from = file_list[1],
-                       from = NULL, to = NULL, compression = 1) {
+  if(length(fs) <= 1)
+    stop('Number of input files should more than one.')
 
-  # Check params.
-  if(is.numeric(from) & is.numeric(to) && from > to) stop('from must not larger than to.')
+  if(is.null(from))
+    from <- rep(1, length(fs))
+  if(is.null(to))
+    to <- from * 0
 
-  # Getting meta data.
-  ncf <- nc_open(meta_from)
-  global_attr <- ncatt_get(ncf, 0)
+  message('Collecting infos...')
 
-  dim_names <- names(ncf$dim)
-  dim_attrs <- list()
-  for(dim_name in dim_names)
-    dim_attrs[[dim_name]] <- ncatt_get(ncf, dim_name)
+  tlen <- c()
+  tunits <- c()
+  calendars <- c()
+  tvals <- list()
+  for(i in 1:length(fs)) {
+    ncf <- nc_open(fs[i])
+    tdname <- find_dim_time(ncf)
+    timeinfo <- ncf$dim[[tdname]]
+    tunits[i] <- timeinfo$units
+    tvals[[i]] <- timeinfo$vals
+    tlen[i] <- length(tvals[[i]])
+    calendars[i] <- timeinfo$calendar
+    nc_close(ncf)
+    if(to[i] <= 0 | to[i] > tlen[i]) to[i] <- tlen[i]
+    if(from[i] <= 0 | from[i] > tlen[i]) from[i] <- tlen[i]
+  }
+  allfrom <- cumsum(to - from + 1) - (to - from)
 
-  names(dim_attrs) <- dim_names
-
-  dim_vals <- list()
-  for(dim_name in dim_names)
-    dim_vals[[dim_name]] <- ncf$dim[[dim_name]]$vals
-
-  # Getting Var informations.
-  var_names <- names(ncf$var)
-
-  var_dims <- list()
-  var_attrs <- list()
-  for(var_name in var_names) {
-    var_dims[[var_name]] <-
-      sapply(ncf$var[[var_name]]$dim, function(x) x$name)
-
-    var_attrs[[var_name]] <- ncatt_get(ncf, var_name)
+  timev <- tvals[[1]][from[1]:to[1]]
+  for(i in 2:length(fs)) {
+    if(tunits[i] == tunits[1]) {
+      timev <- append(timev, tvals[[i]][from[i]:to[i]])
+    } else {
+      itimev <- time2num(num2time(tvals[[i]], tunits[i]),
+                         since = tunits[1])$vals
+      timev <- append(timev, itimev[from[i]:to[i]])
+    }
   }
 
-  # Get where is the dimention that to be combine.
-  cd_site <- sapply(var_dims, function(x) which(x == combine_dim))
+  if(is.null(calendars[1])) calendars[1] <- 'proleptic_gregorian'
+  dtime <- ncdim_def('time', tunits[1], timev, calendar = calendars[1])
+
+  ncf <- nc_open(fs[datum_nc])
+  tdname <- find_dim_time(ncf)
+  newdims <- ncf$dim
+  newdims[[tdname]] <- dtime
+
+  vars <- names(ncf$var)
+  varinfos <- list()
+  attrs <- list()
+  newvars <- list()
+
+  for(var in vars) {
+    varinfo <- ncf$var[[var]]
+    dims <-  sapply(varinfo$dim, function(x)x$name)
+    size <- varinfo$size
+    units <- varinfo$units
+    attr <- ncatt_get(ncf, var)
+    attr[['_FillValue']] <- NULL
+    attrs[[var]] <- attr
+    varinfos[[var]] <- list(dims = dims, size = size)
+
+    vardims <- list()
+    for(i in 1:length(dims)) {
+      vardims[[i]] <- newdims[[dims[i]]]
+    }
+    newvar <- ncvar_def(var, attr[['units']],
+                        vardims,
+                        compression = compression)
+    newvars[[var]] <- newvar
+  }
+
+  global_attrs <- ncatt_get(ncf, 0)
 
   nc_close(ncf)
 
-  # Check each nc file and get the total length.
-  len_get <- c()
-  from_get <- c()
-  cdim_val <- c()
-  from_put <- c()
-  ifrom_put <- 1
-  for(fn in file_list) {
-    ncf <- nc_open(fn)
-    # TODO Check the size of each var of each files.
 
-    cd_len <- ncf$dim[[combine_dim]]$len
-    ifrom <- from; ito <- to
-    if(!is.numeric(ifrom) || ifrom < 1) ifrom <- 1
-    if(!is.numeric(ito) || ito > cd_len) ito <- cd_len
-    if(ifrom > cd_len) ifrom <- cd_len
-    if(ito < 1) ito <- 1
-    len_get <- append(len_get, ito - ifrom + 1)
-    from_get <- append(from_get, ifrom)
-    cdim_val <- append(cdim_val, ncf$dim[[combine_dim]]$vals[ifrom:ito])
-
-    from_put <- append(from_put, ifrom_put)
-    ifrom_put <- ifrom_put + ito - ifrom + 1
-
-    nc_close(ncf)
-  }
-
-  dim_vals[[combine_dim]] <- cdim_val
-
-  # Create assemble nc file.
-  adims <- list()
-  for(dim_name in dim_names) {
-    adim <- ncdim_def(dim_name, 'None', dim_vals[[dim_name]])
-    adims[[dim_name]] <- adim
-  }
-
-  adatas <- list()
-  for(var_name in var_names) {
-    adata <- ncvar_def(var_name, "None", adims[ var_dims[[var_name]] ],
-                       compression = compression)
-    adatas[[var_name]] <- adata
-  }
-
-  print(sprintf('Creating file %s', out_file))
-
-  ncfa <- nc_create(out_file, adatas)
-
-  # Set each attributes of meta data.
-  for(attr_name in names(global_attr))
-    ncatt_put(ncfa, 0, attr_name, global_attr[[attr_name]])
-
-  for(var_name in var_names) {
-    for(attr_name in names(var_attrs[[var_name]]))
-      ncatt_put(ncfa, var_name, attr_name, var_attrs[[var_name]][[attr_name]])
-  }
-
-  for(dim_name in dim_names) {
-    for(attr_name in names(dim_attrs[[dim_name]]))
-      ncatt_put(ncfa, dim_name, attr_name, dim_attrs[[dim_name]][[attr_name]])
-  }
-
-
-  # Write in data from each original nc file.
-  for(i in 1:length(file_list)) {
-    fn <- file_list[i]
-    ncf <- nc_open(fn)
-    print(paste('Writing', fn))
-    for(var_name in var_names) {
-
-      pstart <- ostart <- rep(1, length(var_dims[[var_name]]))
-      ostart[cd_site[[var_name]]] = from_get[i]
-      pstart[cd_site[[var_name]]] = from_put[i]
-      olen <- rep(-1, length(var_dims[[var_name]]))
-      olen[cd_site[[var_name]]] = len_get[i]
-
-      # Write in data.
-      odata <- ncvar_get(ncf, var_name, ostart, olen)
-      ncvar_put(ncfa, var_name, odata, pstart, olen)
+  nncf <- nc_create(out_file, newvars, force_v4 = TRUE)
+  for(var in vars)
+    for(attr in names(attrs[[var]])){
+      ncatt_put(nncf, var, attr, attrs[[var]][[attr]])
     }
+
+  for(i in 1:length(fs)) {
+    f <- fs[i]
+    message(paste("Combing file ", f, '...', sep=''))
+    ncf <- nc_open(f)
+
+    tdname <- find_dim_time(ncf)
+    for(var in vars) {
+      message(paste("Combing variable ", var, '...', sep=''))
+      ifrom <- rep(1, length(varinfos[[var]]$size))
+      iwfrom <- ifrom
+      ito <- varinfos[[var]]$size
+      timesite <- which(tdname == varinfos[[var]]$dims)
+      if(length(timesite) > 0) {
+        ifrom[timesite] <- from[i]
+        ito[timesite] <- to[i]
+        iwfrom[timesite] <- allfrom[i]
+      }
+      ilen <- ito - ifrom + 1
+
+      val <- ncvar_get(ncf, var, ifrom, ilen)
+      ncvar_put(nncf, var, val, iwfrom, ilen)
+      rm(val)
+    }
+
     nc_close(ncf)
   }
+  nc_close(nncf)
+  message('Complete.')
+}
 
-  nc_close(ncfa)
+#' Write ArcInfo ASCII grid data.
+#'
+#' @description Write the grid data to the file as a ArcInfo type ASCII file by
+#'              offering a list of grid data like the output of points2grid()
+#'              or create_flow_direction(), or a matrix and some necessary
+#'              informations like cell size, x and y corner of the grid data and
+#'              so on.
+#'
+#' @param grid A list of grid data or a matrix. When it's a matrix, xcor, ycor and
+#'             csize are necessary.
+#' @param out_file Output file path.
+#' @param xcor X corner of the grid. Necessary when grid is a matrix.
+#' @param ycor Y corner of the grid. Necessary when grid is a matrix.
+#' @param csize Cell size of the grid. Necessary when grid is a matrix.
+#' @param NA_value A value to reprent the NA value.
+#'
+#' @export
+write_arc_grid <- function(grid, out_file, xcor=NULL, ycor=NULL, csize=NULL, NA_value=-9999) {
+  if(is.list(grid)) {
+    if(is.null(grid$xllcorner) | is.null(grid$yllcorner) | is.null(grid$cellsize)) {
+      stop("grid should have xllcorner, yllconer and cellsize.")
+    }
+    ncols=nrow(grid$grid)
+    nrows=ncol(grid$grid)
+    xllcorner <- grid$xllcorner
+    yllcorner <- grid$yllcorner
+    cellsize <- grid$cellsize
+    griddata <- grid$grid
+  } else {
+    if(!is.matrix(grid)) {
+      stop("grid should be a list or a matirx.")
+    }
+    if(is.null(xcor) | is.null(ycor) | is.null(csize)) {
+      stop("xcor, ycor and csize must provided when grid is a matrix.")
+    }
+    ncols=nrow(grid)
+    nrows=ncol(grid)
+    xllcorner <- xcor
+    yllcorner <- ycor
+    cellsize <- csize
+    griddata <- grid
+  }
+  griddata <- t(griddata)
+  griddata <- griddata[ncol(griddata):1, ]
+  meta <- c(paste('ncols         ', ncols),
+            paste('nrows         ', nrows),
+            paste('xllcorner     ', round(xllcorner, 6)),
+            paste('yllcorner     ', round(yllcorner, 6)),
+            paste('cellsize      ', round(cellsize, 6)),
+            paste('NODATA_value  ', NA_value))
+  writeLines(meta, out_file)
+  write.table(griddata, out_file, append=TRUE, row.names=FALSE, col.names=FALSE, na=paste(NA_value))
+}
+
+
+#' Read ArcInfo ASCII grid data.
+#'
+#' @description Read the grid data from ArcInfo type ASCII file.
+#'
+#' @param grid_file A ArcInfo ASCII grid file.
+#' @return A grid data in list type, including nrows, ncols, xllcorner, yllcorner and cellsize.
+#'
+#' @export
+read_arc_grid <- function(grid_file) {
+  params <- strsplit(readLines(grid_file, 6), '\\s+')
+  xcor <- as.numeric(params[[3]][2])
+  ycor <- as.numeric(params[[4]][2])
+  csize <- as.numeric(params[[5]][2])
+  NA_value <- as.numeric(params[[6]][2])
+
+  grid <- read.table(grid_file, skip=6)
+  grid <- as.matrix(grid)
+  ncols <- ncol(grid)
+  nrows <- nrow(grid)
+  grid <- t(grid)
+  row.names(grid) <- NULL
+
+  grid <- grid[ , nrows:1]
+  grid[grid == NA_value] <- NA
+
+  in_grid <- list(ncols=ncols,
+                  nrows=nrows,
+                  xllcorner=xcor,
+                  yllcorner=ycor,
+                  cellsize=csize,
+                  grid=grid)
+
+  return(in_grid)
 }

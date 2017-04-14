@@ -822,3 +822,38 @@ write.meta4 <- function(urls, file = "") {
   mtl <- c(mtlh, mtlg, '</metalink>')
   write.table(mtl, file, quote = FALSE, col.names = F, row.names = F)
 }
+
+
+#' Calculate shortwave radiation using sunshine duration.
+#' @description Calculate shortwave radiation using sunshine duration using
+#'              Angstrom formula at daily scale.
+#' @param ssd Sunshine duration (hour) in a day.
+#' @param lat Latitude of the station location.
+#' @param ts Date or date series of the ssd data. Would regard the first
+#'           day in a year as the first ssd data if not provided.
+#' @param a Coefficient of the Angstrom formula. Determine the relationship
+#'          between ssd and radiation. Default 0.25.
+#' @param b Coefficient of the Angstrom formula as a.
+#'
+#' @references Martinezlozano J A, Tena F, Onrubia J E, et al. The historical
+#'             evolution of the Angstrom formula and its modifications: review
+#'             and bibliography.[J]. Agricultural & Forest Meteorology, 1985,
+#'             33(2):109-128.
+#' @export
+radiation <- function(ssd, lat, ts = NULL, a = 0.25, b=0.5) {
+  lat <- lat*pi/180
+  if(is.null(ts)) {
+    J <- rep_len(c(1:365, 1:365, 1:365, 1:366), length(ssd))
+  } else {
+    J <- yday(ts)
+  }
+  dr <- 1 + 0.033*cos(pi*J/182.5)
+  delta <- 0.408 * sin(pi*J/182.5 - 1.39)
+  ws <- acos(-tan(lat) * tan(delta))
+
+  Ra <- 1367 * dr/pi*(ws*sin(lat)*sin(delta)+cos(lat)*cos(delta)*sin(ws))
+
+  N <- ws*24/pi
+  Rs <- (a + b * ssd / N) * Ra
+  Rs
+}
