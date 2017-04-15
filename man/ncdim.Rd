@@ -13,7 +13,7 @@ ncdim_lon(vals = NULL, from = NULL, csize = NULL, len = NULL,
 ncdim_lat(vals = NULL, from = NULL, csize = NULL, len = NULL,
   name = "lat", longname = "latitute")
 
-ncdim_time(time, name = "time", ...)
+ncdim_time(time, name = "time", calendar = "proleptic_gregorian", ...)
 }
 \arguments{
 \item{vals}{Values of the dimension. For lon and lat can be a series of longitudes and

@@ -151,9 +151,9 @@ ncdim_lat <- function(vals = NULL, from = NULL, csize = NULL, len = NULL, name =
 
 #' @rdname ncdim
 #' @export
-ncdim_time <- function(time, name = 'time', ...) {
+ncdim_time <- function(time, name = 'time', calendar = 'proleptic_gregorian', ...) {
   ptime <- time2num(time, ...)
-  dim_time <- ncdim_def(name, vals = ptime$val, units = ptime$units)
+  dim_time <- ncdim_def(name, vals = ptime$val, units = ptime$units, calendar = calendar)
   dim_time
 }
 
@@ -679,7 +679,8 @@ nc_combine_time <- function(fs, out_file, from = NULL, to = NULL, datum_nc = 1, 
     for(i in 1:length(dims)) {
       vardims[[i]] <- newdims[[dims[i]]]
     }
-    newvar <- ncvar_def(var, attr[['units']],
+
+    newvar <- ncvar_def(var, 'NONE',
                         vardims,
                         compression = compression)
     newvars[[var]] <- newvar
@@ -815,3 +816,5 @@ read_arc_grid <- function(grid_file) {
 
   return(in_grid)
 }
+
+
