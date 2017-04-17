@@ -818,3 +818,178 @@ read_arc_grid <- function(grid_file) {
 }
 
 
+#' Clip a part from a netCDF file to another netCDF file.
+#'
+#' @description Clip a part from a netCDF file to another netCDF file by providing dimensions, from an to.
+#'
+#' @param file A netCDF file to be clip.
+#' @param out_file The netCDF file to store the cliped part of the original netCDF file.
+#' @param from A vector of the border that where to begin to clip the variables at each
+#'             dimensions. The length should be as same as dims. If byval is TRUE, or
+#'             time should be the "date-like" integer in the format of YYYYMMDD, such as
+#'             that 19600101 means "1960-01-01".
+#' @param to   A vector of the border that where to stop to clip the variables at each
+#'             dimensions. The length should be as same as dims, details see from.
+#' @param dim Names of the dimensions to be clip. Default are longitude, latitude and time.
+#' @param vars Variables to be clip. Default all the variables of the origin nc file.
+#' @param byval Determine the from and to are values of the dimensions (e.g. longitude
+#'              values) or the subscript of the dimensions (e.g. the N th value of the
+#'              variable). Default TRUE, use the values of the dimensions.
+#' @param compression The same agrument of function ncvar_def.
+#'
+#' @export
+nc_intercept <- function(file, out_file, from = NULL, to = NULL, dims = NULL,
+                         vars = NULL, byval = TRUE, compression = NA) {
+  nc_in <- nc_open(file)
+  tryCatch({
+    if(is.null(dims)) {
+      #### Default longitude, latitude and time.
+      dims <- c(find_dim_lon(nc_in),
+                find_dim_lat(nc_in),
+                find_dim_time(nc_in))
+    }
+    if(length(from) < length(dims))
+      from <- c(from, rep(NA, length(dims) - length(from)))
+    if(length(from) > length(dims))
+      from <- from[1:length(dims)]
+    if(length(to) < length(dims))
+      to <- c(to, rep(NA, length(dims) - length(to)))
+    if(length(to) > length(dims))
+      to <- to[1:length(dims)]
+
+    if(any(from > to, na.rm=T))
+      stop('From could not larger than to.')
+
+    dimlens <- c()
+    for(idim in dims) {
+      ilen <- nc_in$dim[[idim]]$len
+      dimlens <- c(dimlens, ilen)
+    }
+    dimunits <- c()
+    for(idim in dims) {
+      iu <- nc_in$dim[[idim]]$units
+      dimunits <- c(dimunits, iu)
+    }
+    time_site <- which(dims == 'time' | grepl('since', dimunits))
+
+    dimvals <- list()
+    for(idim in dims) {
+      ival <- nc_in$dim[[idim]]$vals
+      dimvals[[idim]] <- ival
+    }
+
+    if(byval) {
+      minvs <- sapply(dimvals, min)
+      maxvs <- sapply(dimvals, max)
+
+      if(length(time_site) > 0) {
+        for(time_s in time_site) {
+          timevals <- dimvals[[time_s]]
+          timests <- num2time(timevals, dimunits[[time_s]])
+          if(!is.na(from[time_s])){
+            fromtime <- paste(from[time_s])
+            sttime <- as.POSIXct(fromtime, format = "%Y%m%d", tz = 'UTC')
+            from[time_s] <- min(timevals[sttime <= timests])
+          }
+          if(!is.na(to[time_s])){
+            totime <- paste(to[time_s])
+            sttime <- as.POSIXct(totime, format = "%Y%m%d", tz = 'UTC')
+            to[time_s] <- max(timevals[sttime >= timests])
+          }
+        }
+      }
+      from[is.na(from)] <- minvs[is.na(from)]
+      to[is.na(to)] <- maxvs[is.na(to)]
+      from[from < minvs] <- minvs[from < minvs]
+      to[to > maxvs] <- maxvs[to > maxvs]
+
+      sns <- list()
+      for(d in 1:length(dims)) {
+        dimval <- dimvals[[d]]
+        sn <- which(dimval <= to[d] & dimval >= from[d])
+        sns[[dims[d]]] <- sn
+      }
+    } else {
+      from[is.na(from)] <- 1
+      to[is.na(to)] <- dimlens[is.na(to)]
+      from[from < 1] <- 1
+      to[to > dimlens] <- dimlens[to > dimlens]
+
+      sns <- list()
+      for(d in 1:length(dims)) {
+        sns[[dims[d]]] <- floor(from[d]) : ceiling(to[d])
+      }
+    }
+
+    ########### Build new dims and vars ###########
+    newdims <- list()
+    for(idim in names(nc_in$dim)) {
+      if(idim %in% dims) {
+        vals <- nc_in$dim[[idim]]$vals[sns[[idim]]]
+      } else {
+        vals <- nc_in$dim[[idim]]$vals
+      }
+      calendar <- NA
+      if(!is.null(nc_in$dim[[idim]]$calendar))
+        calendar <- nc_in$dim[[idim]]$calendar
+      newdim <- ncdim_def(idim, nc_in$dim[[idim]]$units, vals, calendar = calendar)
+      newdims[[idim]] <- newdim
+    }
+
+    if(is.null(vars))
+      vars <- names(nc_in$var)
+    delvars <- c()
+
+    newvars <- list()
+    for(ivar in vars) {
+      idimns <- sapply(nc_in$var[[ivar]]$dim, function(x) x$name)
+      if(length(idimns) == 0){
+        delvars <- c(ivar)
+        next
+      }
+      idims <- list()
+      for(idimn in idimns) {
+        idims[[idimn]] <- newdims[[idimn]]
+      }
+      newvar <- ncvar_def(ivar, 'TEMP', idims, compression = compression)
+      newvars[[ivar]] <- newvar
+    }
+    vars <- vars[!(vars %in% delvars)]
+
+    nc_out <- nc_create(out_file, newvars)
+
+    ########### Copy attributes. ##############
+    for(ivar in vars) {
+      attrs <- ncatt_get(nc_in, ivar)
+      attrs$`_FillValue` <- NULL
+      for(attr in names(attrs)) {
+        ncatt_put(nc_out, ivar, attr, attrs[[attr]])
+      }
+    }
+    attrs <- ncatt_get(nc_in, 0)
+    for(attr in names(attrs)) {
+      ncatt_put(nc_out, 0, attr, attrs[[attr]])
+    }
+
+    ########### Write in variables. ##########
+    for(ivar in vars) {
+      message(sprintf("Writing variable %s ...", ivar))
+      idimns <- sapply(nc_in$var[[ivar]]$dim, function(x) x$name)
+      ifrom <- rep(1, length(idimns))
+      ilen <- rep(-1, length(idimns))
+      for(i in 1:length(idimns)) {
+        if(idimns[i] %in% dims) {
+          ilen[i] = length(sns[[idimns[i]]])
+          ifrom[i] = sns[[idimns[i]]][1]
+        }
+      }
+      val <- ncvar_get(nc_in, ivar, ifrom, ilen)
+      ncvar_put(nc_out, ivar, val)
+      rm(val)
+    }
+    nc_close(nc_out)
+  }, finally = {
+    nc_close(nc_in)
+  })
+}
+
