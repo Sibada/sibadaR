@@ -587,7 +587,7 @@ get_nh <- function(aurl, dir = "", mustnewdir=FALSE) {
   pgnum <- length(apg %>% html_node('div[id="content"]') %>% html_node('div[id="thumbnail-container"]') %>% html_nodes('div[class="thumb-container"]'))
   print(paste("Total", pgnum, "pgs."))
 
-  title <- gsub('[:\\*\\\\\\"\\?\\|]', '', x=title)
+  title <- gsub('[:\\*\\\\\\"\\?\\|\\/<>]', ' ', x=title)
   ifmkdir <- dir.create(paste(dir, title, sep = ""), recursive=F)
   if(!ifmkdir){
     if(mustnewdir){
@@ -607,7 +607,8 @@ get_nh <- function(aurl, dir = "", mustnewdir=FALSE) {
         subpg <- read_html(suburl,timeout=1000)
 
         pgurl <-  subpg %>% html_node('div[id="content"]') %>% html_node('div[id="page-container"]') %>% html_node('section[id="image-container"]') %>% html_node('img') %>% html_attr('src')
-        pgurl <- paste('https:', pgurl, sep = '')
+        if(substr(pgurl, 1, 6) != "https:")
+          pgurl <- paste('https:', pgurl, sep = '')
 
         ntmp <-  strsplit(pgurl, '/')[[1]]
         pgname <- ntmp[length(ntmp)]
