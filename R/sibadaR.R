@@ -806,7 +806,7 @@ write.meta4 <- function(urls, file = "") {
   filenames <- sapply(strsplit(urls,'[/?]'), function(x) {
     pfn <- x[grepl("\\.",x)]
     if(length(pfn) >= 2) {
-      pfn[2]
+      pfn[length(pfn)]
     } else {
       pfn[1]
     }
