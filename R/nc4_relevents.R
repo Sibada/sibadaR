@@ -64,6 +64,9 @@ find_dim_time <- function(ncfile, var = NULL) {
 ############################################################################
 ############################################################################
 
+
+
+
 #' Show the variables or their dimensions of a netCDF file.
 #'
 #' @description Show the variables or their dimensions of a netCDF file.
@@ -606,14 +609,17 @@ write_ncvar <- function(val, file, var, dims = c(), newvar = FALSE, units = 'NUL
 #' @param to A vector indicating the end of the time range to be combine of each nc file.
 #' @param datum_nc Which nc file to be regard as the datum, i.e. the attributes, dimensions
 #'                 and variable names would inherit from it.
+#' @param slip Provided if the time datum ("XXX" of the "days since XXX") of each file are not
+#'             equal. It appoints the times interval (in time step) between each nc file to be
+#'             combine. Default 30.
 #'
 #' @param compression The same parameters of function ncvar_def. Define the compression level
 #'                    of the nc file.
 #'
 #' @export
-nc_combine_time <- function(fs, out_file, from = NULL, to = NULL, datum_nc = 1, compression = NA) {
+nc_combine_time <- function(fs, out_file, from = NULL, to = NULL, datum_nc = 1, compression = NA, slip = 30) {
 
-  if(length(fs) <= 1)
+  if(length(fs) < 1)
     stop('Number of input files should more than one.')
 
   if(is.null(from))
@@ -627,6 +633,10 @@ nc_combine_time <- function(fs, out_file, from = NULL, to = NULL, datum_nc = 1, 
   tunits <- c()
   calendars <- c()
   tvals <- list()
+
+  if(length(slip) < length(fs) - 1)
+    slip <- rep(slip[1], length(fs))
+
   for(i in 1:length(fs)) {
     ncf <- nc_open(fs[i])
     tdname <- find_dim_time(ncf)
@@ -641,14 +651,16 @@ nc_combine_time <- function(fs, out_file, from = NULL, to = NULL, datum_nc = 1, 
   }
   allfrom <- cumsum(to - from + 1) - (to - from)
 
+  # Define values of the new time dimension.
   timev <- tvals[[1]][from[1]:to[1]]
   for(i in 2:length(fs)) {
-    if(tunits[i] == tunits[1]) {
+    if (tunits[i] == tunits[1]) {
       timev <- append(timev, tvals[[i]][from[i]:to[i]])
     } else {
-      itimev <- time2num(num2time(tvals[[i]], tunits[i]),
-                         since = tunits[1])$vals
+      movev <- timev[length(timev)] - tvals[[i]][1] + slip[i]
+      itimev <- tvals[[i]] + movev
       timev <- append(timev, itimev[from[i]:to[i]])
+      message(sprintf('Time move by %f', movev))
     }
   }
 
@@ -665,6 +677,7 @@ nc_combine_time <- function(fs, out_file, from = NULL, to = NULL, datum_nc = 1, 
   attrs <- list()
   newvars <- list()
 
+  # Write in the data and attributes of the old nc files.
   for(var in vars) {
     varinfo <- ncf$var[[var]]
     dims <-  sapply(varinfo$dim, function(x)x$name)
@@ -676,16 +689,15 @@ nc_combine_time <- function(fs, out_file, from = NULL, to = NULL, datum_nc = 1, 
     varinfos[[var]] <- list(dims = dims, size = size)
 
     vardims <- list()
-    for(i in 1:length(dims)) {
-      vardims[[i]] <- newdims[[dims[i]]]
-    }
-
+    if(length(dims) != 0)
+      for (i in 1:length(dims)) {
+        vardims[[i]] <- newdims[[dims[i]]]
+      }
     newvar <- ncvar_def(var, 'NONE',
                         vardims,
                         compression = compression)
     newvars[[var]] <- newvar
   }
-
   global_attrs <- ncatt_get(ncf, 0)
 
   nc_close(ncf)
@@ -705,6 +717,9 @@ nc_combine_time <- function(fs, out_file, from = NULL, to = NULL, datum_nc = 1, 
     tdname <- find_dim_time(ncf)
     for(var in vars) {
       message(paste("Combing variable ", var, '...', sep=''))
+      if(length(ncf$var[[var]]$dim) <= 0)
+        next
+
       ifrom <- rep(1, length(varinfos[[var]]$size))
       iwfrom <- ifrom
       ito <- varinfos[[var]]$size
@@ -993,3 +1008,23 @@ nc_intercept <- function(file, out_file, from = NULL, to = NULL, dims = NULL,
   })
 }
 
+
+
+flatten <- function(indata, points) {
+  xs <- points[, 1]
+  ys <- points[, 2]
+  ux <- sort(unique(xs))
+  uy <- sort(unique(ys))
+  lx <- length(ux)
+  ly <- length(uy)
+  itvx <- ux[2:lx] - ux[1:(lx - 1)]
+  itvy <- uy[2:ly] - uy[1:(ly - 1)]
+  csizex <- as.numeric(names(which.max(table(itvx))))
+  csizey <- as.numeric(names(which.max(table(itvy))))
+
+  rows <- xs/csizex; rows <- round(rows - min(rows) + 1)
+  cols <- ys/csizey; cols <- round(cols - min(cols) + 1)
+  outdata <- array(dim=c(dim(indata)[3], nrow(points)))
+  for(i in 1:nrow(points)) outdata[ ,i] <- indata[rows[i], cols[i], ]
+  outdata
+}

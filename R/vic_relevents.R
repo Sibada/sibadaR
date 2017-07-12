@@ -554,94 +554,51 @@ grid2points <- function(grid, x=NULL, y=NULL, csize=NULL, xcor=NULL, ycor=NULL, 
 #' @param x Vector of x coordinates or hich column store the x cordinate.
 #' @param y Which column store the y cordinate.
 #' @param val Which column store the point value.
-#' @param out_file The output file path. If provide, it will write as an ArcInfo file
-#'                 without return.
-#' @param dec Precision of the coordinates.
 #'
-#' @return A list including the meta parameters (num of rows and columns, size of the cells,
-#'         x and y corner) and the matrix of the gridcell value.
+#' @return A matrix of the gridcell value.
 #' @export
-points2grid <- function(points, x=NULL, y=NULL, val=NULL, out_file=NULL, dec=6) {
+points2grid <- function(points, x=NULL, y=NULL, val=NULL) {
 
-  if(is.null(points) & (is.null(x) | is.null(y))) stop('Must provide points or x and y.')
-
-  if(is.null(x)) {
-    xs <- points[ , 1]
-  } else {
-    if(length(x) > 1) {
-      xs <- x
-    } else {
-      xs <- points[ , x]
-    }
+  if (is.null(points) & (is.null(x) | is.null(y)))
+    stop("Must provide points or x and y.")
+  if (is.null(x)) {
+    xs <- points[, 1]
+  }else {
+    xs <- x
   }
-  if(is.null(y)) {
-    ys <- points[ , 2]
+  if (is.null(y)) {
+    ys <- points[, 2]
   } else {
-    if(length(y) == length(xs)) {
-      ys <- y
-    } else {
-      ys <- points[ , y[1]]
-    }
+    ys <- y
   }
   if(is.null(val)) {
-    if(ncol(points) > 2){
-      v <- points[ , 3]
-    } else {
-      v <- rep(0, length(xs))
+    if(nrow(points >= 3)) {
+      v = points[ ,3]
+    }else{
+      v=rep(0,length(xs))
     }
   } else {
-    if(length(val) == length(xs)) {
-      v <- val
-    } else {
-      v <- points[ , val[1]]
-    }
+    v = val
   }
-
   ux <- sort(unique(xs))
   uy <- sort(unique(ys))
-
   lux <- length(ux)
   luy <- length(uy)
+  itvx <- unique(ux[2:lux] - ux[1:(lux - 1)])[1]
+  itvy <- unique(uy[2:luy] - uy[1:(luy - 1)])[1]
 
-  itvx <- unique(ux[2:lux] - ux[1:(lux-1)])
-  itvy <- unique(uy[2:luy] - uy[1:(luy-1)])
-  if(sd(c(itvx[1], itvy[1])) > 10**(-dec)) {
-    stop("Intervals of points are not equal. Cannot be gridded.")
-  }
-  cellsize <- mean(c(itvx[1],itvy[1]))
-
+  cellsize <- mean(c(itvx[1], itvy[1]))
   xcor <- min(ux) - cellsize/2
   ycor <- min(uy) - cellsize/2
-
   cols <- round((xs - xcor + cellsize/2)/cellsize)
   rows <- round((ys - ycor + cellsize/2)/cellsize)
-  rows <- max(rows) - rows + 1
-
   nrow <- max(rows)
   ncol <- max(cols)
-
-  grid <- matrix(nrow=nrow, ncol=ncol)
-  for(p in 1:nrow(points)) {
-    grid[rows[p], cols[p]] <- v[p]
+  grid <- matrix(nrow = ncol, ncol = nrow)
+  for (p in 1:nrow(points)) {
+    grid[cols[p], rows[p]] <- v[p]
   }
-  if(is.null(out_file)){
-    arcgrid <- list('ncols'=ncol,
-                    'nrows'=nrow,
-                    'xllcorner'=xcor,
-                    'yllcorner'=ycor,
-                    'cellsize'=cellsize,
-                    'grid'=grid)
-    return(arcgrid)
-  } else {
-    meta <- c(paste('ncols         ', ncol),
-              paste('nrows         ', nrow),
-              paste('xllcorner     ', xcor),
-              paste('yllcorner     ', ycor),
-              paste('cellsize      ', cellsize),
-              paste('NODATA_value  ', '-9999'))
-    writeLines(meta, out_file)
-    write.table(grid, out_file, append=TRUE, row.names=FALSE, col.names=FALSE, na="-9999")
-  }
+  grid
 }
 
 # river_shp='~/IMERG/predata/dense_river.shp'
