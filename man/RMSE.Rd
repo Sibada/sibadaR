@@ -17,4 +17,3 @@ Root mean square error of sim and obs series.
 \description{
 Calculate root mean square error of two data series.
 }
-

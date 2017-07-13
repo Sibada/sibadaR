@@ -5,7 +5,7 @@
 \title{Combine several netCDF file by time.}
 \usage{
 nc_combine_time(fs, out_file, from = NULL, to = NULL, datum_nc = 1,
-  compression = NA)
+  compression = NA, slip = 30)
 }
 \arguments{
 \item{fs}{A vector of string. File paths of each nc file to be combine.}
@@ -21,9 +21,12 @@ and variable names would inherit from it.}
 
 \item{compression}{The same parameters of function ncvar_def. Define the compression level
 of the nc file.}
+
+\item{slip}{Provided if the time datum ("XXX" of the "days since XXX") of each file are not
+equal. It appoints the times interval (in time step) between each nc file to be
+combine. Default 30.}
 }
 \description{
 Combine several netCDF file by time. Each netCDF file should have the
              same dimensions and variables.
 }
-

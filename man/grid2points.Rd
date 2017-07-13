@@ -28,4 +28,3 @@ A table of the points, including x and y coordinate and the values, converted
 Conver the grid data to points, showed as a table, with the columns of
              coordinates for each point and a column for their value.
 }
-

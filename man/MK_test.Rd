@@ -22,4 +22,3 @@ A named vector include M-K static value(Z), Sen's slope value
 \description{
 Mann-Kendall trend test
 }
-

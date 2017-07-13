@@ -24,4 +24,3 @@ Save the url list of a series of file to be downloaded as
              that downthemall could not amend the urls when import them to
              the queue.
 }
-

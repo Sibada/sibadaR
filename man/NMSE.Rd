@@ -17,4 +17,3 @@ Normailzed mean square error of sim and obs series.
 \description{
 Calculate normailzed mean square error of two data series.
 }
-

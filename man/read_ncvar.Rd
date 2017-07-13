@@ -40,4 +40,3 @@ The values of the data of the netCDF file.
 \description{
 Using one line code to get data from netCDF file.
 }
-

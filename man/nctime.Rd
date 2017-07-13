@@ -2,8 +2,8 @@
 % Please edit documentation in R/nc4_relevents.R
 \name{nctime}
 \alias{nctime}
-\alias{num2time}
 \alias{time2num}
+\alias{num2time}
 \title{Convert numbers to time or convert time to numbers in nc format.}
 \usage{
 time2num(time, since = time[1], freq = NULL, tz = "UTC")
@@ -31,4 +31,3 @@ Convert numbers of netCDF time dimension style to R time series by providing
              units or Convert R time series to numbers and units of netCDF time dimension
              style.
 }
-

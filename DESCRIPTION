@@ -33,4 +33,4 @@ Suggests:
     downloader
 URL: https://github.com/Sibada/sibadaR
 BugReports: https://github.com/Sibada/sibadaR/issues
-RoxygenNote: 5.0.1
+RoxygenNote: 6.0.1

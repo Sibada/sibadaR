@@ -33,4 +33,3 @@ variable). Default TRUE, use the values of the dimensions.}
 \description{
 Clip a part from a netCDF file to another netCDF file by providing dimensions, from an to.
 }
-

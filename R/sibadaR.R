@@ -825,3 +825,14 @@ write.meta4 <- function(urls, file = "") {
 }
 
 
+#' @description Calculate the grid area (km2) by providing the latitude of the centeroid
+#'              of the grid and the grid size.
+#' @param lat Latitude of the centeroid of the grid.
+#' @param csize Size of the grid (degree)
+#' @return Area of the grid (km2).
+#'
+#' @export
+grid_area <- function(lat, csize){
+  6371.229**2 * csize*pi/180 * (sin((lat+csize/2)*pi/180) - sin((lat-csize/2)*pi/180))
+}
+

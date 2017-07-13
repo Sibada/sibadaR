@@ -36,4 +36,3 @@ Saxton, K. E, Rawls, W. J. Soil Water Characteristic Estimates by Texture
             and Organic Matter for Hydrologic Solutions[J]. Soil Science Society of
             America Journal, 2006, 70(5):1569-1578.
 }
-

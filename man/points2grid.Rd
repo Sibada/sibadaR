@@ -5,8 +5,7 @@
 \title{Convert the point data (a table including columns of the coordinates and value) to
 grid.}
 \usage{
-points2grid(points, x = NULL, y = NULL, val = NULL, out_file = NULL,
-  dec = 6)
+points2grid(points, x = NULL, y = NULL, val = NULL)
 }
 \arguments{
 \item{x}{Vector of x coordinates or hich column store the x cordinate.}
@@ -15,19 +14,12 @@ points2grid(points, x = NULL, y = NULL, val = NULL, out_file = NULL,
 
 \item{val}{Which column store the point value.}
 
-\item{out_file}{The output file path. If provide, it will write as an ArcInfo file
-without return.}
-
-\item{dec}{Precision of the coordinates.}
-
 \item{grid}{A matrix of the gridded data.}
 }
 \value{
-A list including the meta parameters (num of rows and columns, size of the cells,
-        x and y corner) and the matrix of the gridcell value.
+A matrix of the gridcell value.
 }
 \description{
 Conver the point data, usually a table with columns including coordinates
              and values to grids.
 }
-

@@ -187,7 +187,7 @@ delta_svp <- function(t) {
 #'
 #' @export
 ol_rad <- function(tmax, tmin, Rs, Rso, ea) {
-  (4.093e-9 * ((tmax**4 + tmin**4) / 2)) *
+  (4.093e-9 * (((tmax+273.15)**4 + (tmin+273.15)**4) / 2)) *
     (0.34 - (0.14 * sqrt(ea))) *
     (1.35 * (Rs / Rso) - 0.35)
 }
@@ -268,4 +268,36 @@ et0_pm <- function(Rs, tmax, tmin, ws, Rso, G = 0.0, h.ws = 10.0, albedo = 0.23,
   (0.408 * delta * (Rn - G) +
       gamma * 900 / (t + 273.15) * u2 * (es - ea)) /
     (delta + (gamma * (1 + 0.34 * ws)))
+}
+
+#' @description Estimate reference evapotranspiration (ET0) from a hypothetical
+#'              short grass reference surface using the the Hargreaves equation.
+#'
+#'
+#' @param tmax Daily maximum air temperature at 2m height [deg Celsius].
+#'
+#' @param tmin Daily minimum air temperature at 2m height [deg Celsius].
+#'
+#' @param tmean Daily mean air temperature at 2m height [deg Celsius]. If not
+#'              provided it would estimated by averaging the tmax and tmin.
+#'
+#' @param Ra  Clear sky incoming shortwave radiation, i. e. extraterrestrial
+#'            radiation multiply by clear sky transmissivity (i. e. a + b,
+#'            a and b are coefficients of Angstrom formula. Normally 0.75)
+#'            [MJ m-2 day-1]. If not provided, must provide lat and dates.
+#'
+#' @param lat Latitude [degree].
+#'
+#' @param dates A R Date type of a vector of Date type. If not provided, it will
+#'              Regard the ssd series is begin on the first day of a year.
+#'
+#' @return Reference evapotranspiration ET0 from a hypothetical grass
+#'         reference surface [mm day-1].
+#'
+#'
+#' @export
+et0_hg <- function(tmax, tmin, tmean = NULL, Ra = NULL, lat = NULL, dates=NULL) {
+  if(is.null(tmean)) tmean <- (tmax + tmin) / 2
+  if(is.null(Ra)) Ra <- ext_rad(lat, dates)
+  0.0023 * 0.408 * Ra * sqrt(tmax - tmin) * (tmean + 17.8)
 }

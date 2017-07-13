@@ -28,4 +28,3 @@ Create the flow direction data of each VIC gridcell for the routing model
              WARNING: This is a simple heuristic method and more fit for small gridcell.
              It's usually needs further manual calibration by set_direc and plot_flow_direc.
 }
-

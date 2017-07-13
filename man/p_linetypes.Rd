@@ -13,4 +13,3 @@ A chart showing line types with its ID.
 Quickly get what the line types look like in
 base plot function.
 }
-

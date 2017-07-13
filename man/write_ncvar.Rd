@@ -26,4 +26,3 @@ new variable. Default FALSE.}
 \description{
 Write data to netCDF file.
 }
-

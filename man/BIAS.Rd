@@ -17,4 +17,3 @@ Relative bias of efficiency of sim and obs series.
 \description{
 Calculate relative bias (fraction, not percentage) of two data series.
 }
-

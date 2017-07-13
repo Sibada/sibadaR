@@ -28,4 +28,3 @@ Only for the nc4 format IMERG data. Offering a series of path
              of the IMERG files, or single file path, and the coordinates
              of the data.
 }
-

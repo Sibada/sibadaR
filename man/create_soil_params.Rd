@@ -39,4 +39,3 @@ A data frame containing the soil parameters needed by the VIC model. Can
 Create the soil parameters for VIC model by offering coordinates, elevations
              and other datas. Each row of each data must be corresponding to a gridcell.
 }
-
