@@ -1,7 +1,7 @@
 
 #' Create the hydraulic parameters of soil from soil property parameters for VIC model.
 #'
-#' @description
+#' @description Create the hydraulic parameters of soil from soil property parameters for VIC model.
 #'
 #' @param soil_props A dataframe containing the soil hydraulic parameters, including
 #'                   volume fraction of gravity (fraction, not percentage), weight fraction
@@ -18,8 +18,9 @@
 #'         content at the wilting point).
 #'
 #' @details This function is using the Saxton's formulars. If the soil property parametersis
-#'          HWSD, The property parameters are corresponding to T_GRAVEL, T_SAND, T_SILT, T_CLAY,
-#'          T_REF_BULK_DENSITY, and T_OC.
+#'          HWSD, The property parameters are corresponding to T_GRAVEL (fraction), T_SAND
+#'          (fraction), T_SILT (fraction), T_CLAY (fraction), T_REF_BULK_DENSITY (g/cm3),
+#'          and T_OC (fraction).
 #'
 #' @references Saxton, K. E, Rawls, W. J. Soil Water Characteristic Estimates by Texture
 #'             and Organic Matter for Hydrologic Solutions[J]. Soil Science Society of
@@ -217,7 +218,7 @@ create_soil_params <- function(coords, elev, soil_props, anprec, nlayer=3, avg_T
   soil_params <- cbind(soil_params, soil_hydraulic[ , 1:(nlayer*2)])
 
   for(l in 1:nlayer) {
-    soil_params[sprintf('PHI_%d', l)] <- -999
+    soil_params[sprintf('PHI_%d', l)] <- -9999
   }
 
   for(l in 1:nlayer) {
@@ -227,16 +228,19 @@ create_soil_params <- function(coords, elev, soil_props, anprec, nlayer=3, avg_T
   soil_params$ELEV <- round(elev, 1)
 
   soil_params$DEPTH_1 <- 0.1
-  for(l in 2:nlayer) {
-    soil_params[sprintf('DEPTH_%d', l)] <- 0.3
-  }
+  if(nlayer >= 2)
+    for(l in 2:nlayer) {
+      soil_params[sprintf('DEPTH_%d', l)] <- 0.3
+    }
 
   soil_params$AVG_T <- avg_T
   soil_params$DP <- 4.0
 
-  soil_params <- cbind(soil_params, soil_hydraulic[ , (nlayer*2+1):(nlayer*3)])
+  bubbles <- soil_hydraulic[ , (nlayer*2+1):(nlayer*3)]
+  soil_params <- cbind(soil_params, bubbles)
   soil_params <- cbind(soil_params, quarzs)
-  soil_params <- cbind(soil_params, soil_hydraulic[ , (nlayer*3+1):(nlayer*4)])
+  parkdns <- soil_hydraulic[ , (nlayer*3+1):(nlayer*4)]
+  soil_params <- cbind(soil_params, parkdns)
 
   for(l in 1:nlayer) {
     soil_params[sprintf('PARKDN%d', l)] <- 2650
@@ -247,7 +251,9 @@ create_soil_params <- function(coords, elev, soil_props, anprec, nlayer=3, avg_T
   }
 
   soil_params$OFF_GMT <- offgmt
-  soil_params <- cbind(soil_params, soil_hydraulic[ , (nlayer*4+1):(nlayer*6)])
+
+  wcr_wps <-soil_hydraulic[ , (nlayer*4+1):(nlayer*6)]
+  soil_params <- cbind(soil_params, wcr_wps)
   soil_params$Z0_SOIL <- 0.010
   soil_params$Z0_SNOW <- 0.001
   soil_params$PRCP <- anprec

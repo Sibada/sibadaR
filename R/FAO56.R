@@ -1,4 +1,8 @@
+# FAO-56 equations.
 
+
+#' Estimate saturation vapor pressure.
+#'
 #' @description Estimate saturation vapor pressure from air
 #'              temperature.
 #'
@@ -7,9 +11,12 @@
 #' @return saturation vapor pressure [kPa].
 #'
 #' @export
-vp.temp <- function(t)
+vp.temp <- function(t) {
   0.6108 * exp((17.27 * t) / (t + 237.3))
+}
 
+#' Calculate psychrometric constant.
+#'
 #' @description Calculate psychrometric constant.
 #'
 #' @param pres Air pressure [kPa].
@@ -20,7 +27,7 @@ vp.temp <- function(t)
 #' @return Psychrometric constant [kPa degC-1].
 #'
 #' @export
-gamma <- function(pres = NULL, z=NULL) {
+cal_gamma <- function(pres = NULL, z=NULL) {
   if(is.null(pres))
     if(is.null(z)) {
       stop('If pres is null, must provide z (elevation).')
@@ -30,6 +37,8 @@ gamma <- function(pres = NULL, z=NULL) {
   0.000665 * pres
 }
 
+#' Estimate monthly soil heat flux.
+#'
 #' @description Estimate monthly soil heat flux (G) from the mean air
 #'              temperature of the previous, current or next month assuming
 #'              as grass crop.
@@ -50,6 +59,8 @@ soil_heat_flux <- function(t.p, t.n = NULL, t.c = NULL) {
 }
 
 
+#' Estimate daily daily extraterrestrial radiation.
+#'
 #' @description Estimate daily daily extraterrestrial radiation [MJ m-2 day-1].
 #'
 #' @param lat Latitude [degree].
@@ -75,6 +86,9 @@ ext_rad <- function(lat, dates) {
   Ra
 }
 
+#' Estimate daily solar radiation.
+#'
+#'
 #' @description Estimate daily solar radiation at crop surface [MJ m-2 day-1]
 #'              by providing sunshine duration (SSD) in hours.
 #'
@@ -115,6 +129,9 @@ sur_rad <- function(ssd, lat, dates = NULL, a = 0.25, b = 0.5) {
   Rs
 }
 
+#' Estimate actual vapor pressure.
+#'
+#'
 #' @description Estimate actual vapor pressure by providing daily maximum and minimum
 #'              air temperature, daily maximum, mean and minimum relative humidity.
 #'
@@ -122,18 +139,15 @@ sur_rad <- function(ssd, lat, dates = NULL, a = 0.25, b = 0.5) {
 #'
 #' @param tmin Daily minimum air temperature at 2m height [deg Celsius].
 #'
-#' @param rhmax Daily mean relative humidity [%].
+#' @param rhmax Daily mean relative humidity [\%].
 #'
-#' @param rhmean Daily mean relative humidity [%].
+#' @param rhmean Daily mean relative humidity [\%].
 #'
-#' @param rhmin Daily mean relative humidity [%].
+#' @param rhmin Daily mean relative humidity [\%].
 #'
-#' @return Actual vapor pressure (i.e. avp or ea) [kPa].
-#'
-#' @details tmin must be provided.
-#'          If tmax was not provided, avp will only estimated by tmin.
-#'          If both rhmax and rhmin are provided, avp will be estimated
-#'          by tmax, tmin, rhmax and rhmin.
+#' @details tmin must be provided. If tmax was not provided,
+#'          avp will only estimated by tmin. If both rhmax and rhmin are
+#'          provided, avp will be estimated by tmax, tmin, rhmax and rhmin.
 #'          If rhmin was not provided but provided rhmean, avp will
 #'          estimated by rhmean, tmax and tmin.
 #'          If rhmin and rhmean are not provided, avp will estimated by
@@ -141,20 +155,26 @@ sur_rad <- function(ssd, lat, dates = NULL, a = 0.25, b = 0.5) {
 #'          If rhmax, rhmean and rhmin are not provided, avp will only
 #'          estimated by tmin.
 #'
+#' @return Actual vapor pressure (i.e. avp or ea) [kPa].
+#'
+#'
 #' @export
 actual_vp <- function(tmin, tmax = NULL, rhmax = NULL, rhmean = NULL, rhmin = NULL) {
   if(is.null(tmax))
     return(vp.temp(tmin))
   if(!is.null(rhmax) & !is.null(rhmin))
-    return((vp.temp(tmax) * rhmin + vp.temp(tmin) * rhmax)/50)
+    return((vp.temp(tmax) * rhmin + vp.temp(tmin) * rhmax)/200)
   if(!is.null(rhmean))
-    return((vp.temp(tmax) + vp.temp(tmin)) * rhmean/50)
+    return((vp.temp(tmax) + vp.temp(tmin)) * rhmean/200)
   if(!is.null(rhmax))
-    return(vp.temp(tmin) + rhmax / 100)
+    return(vp.temp(tmin) * rhmax / 100)
   if(is.null(rhmax) & is.null(rhmean) & is.null(rhmin))
     return(vp.temp(tmin))
 }
 
+#' Estimate the slope of the saturation vapour pressure curve.
+#'
+#'
 #' @description Estimate the slope of the saturation vapour pressure curve
 #'              by providing a air temperature.
 #'
@@ -167,6 +187,9 @@ delta_svp <- function(t) {
     (t + 237.3)**2
 }
 
+#' Estimate net outgoing longwave radiation.
+#'
+#'
 #' @description Estimate net outgoing longwave radiation.
 #'
 #' @param tmax Daily maximum air temperature at 2m height [deg Celsius].
@@ -193,6 +216,9 @@ ol_rad <- function(tmax, tmin, Rs, Rso, ea) {
 }
 
 
+#' Estimate ET0 by FAO-56 Penman-Monteithe quation.
+#'
+#'
 #' @description Estimate reference evapotranspiration (ET0) from a hypothetical
 #'              short grass reference surface using the FAO-56 Penman-Monteithe
 #'              quation (equation 6 in Allen et al. (1998))
@@ -260,8 +286,9 @@ et0_pm <- function(Rs, tmax, tmin, ws, Rso, G = 0.0, h.ws = 10.0, albedo = 0.23,
 
   Rl <- ol_rad(tmax, tmin, Rs, Rso, ea)
   Rn <- Rs * (1 - albedo) - Rl
+  Rn[Rn < 0] <- 0
 
-  if(is.null(gamma)) gamma <- gamma(pres, z)
+  if(is.null(gamma)) gamma <- cal_gamma(pres, z)
 
   u2 <- ws * (4.87 / log((67.8 * h.ws) - 5.42))
 
@@ -270,6 +297,9 @@ et0_pm <- function(Rs, tmax, tmin, ws, Rso, G = 0.0, h.ws = 10.0, albedo = 0.23,
     (delta + (gamma * (1 + 0.34 * ws)))
 }
 
+#' Estimate ET0 by Hargreaves equation.
+#'
+#'
 #' @description Estimate reference evapotranspiration (ET0) from a hypothetical
 #'              short grass reference surface using the the Hargreaves equation.
 #'

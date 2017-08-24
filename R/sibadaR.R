@@ -5,6 +5,11 @@
 #   Check Package:             'Ctrl + Shift + E'
 #   Test Package:              'Ctrl + Shift + T'
 
+.onLoad <- function(libname, pkgname) {
+  ####
+}
+
+
 # Inner function
 
 mk <- function (x, sen.slope = TRUE, p.value = TRUE) {
@@ -568,12 +573,13 @@ wt <- function(x, file = "", ...) {
 #' @param aurl Lianjie of benzi.
 #' @return Nai
 #' @description Hei hei hei
-#' @import rvest downloader
+#' @details Zui hou zhu ni, shen ti jian kang. Zai jian.
 #' @export
 get_nh <- function(aurl, dir = "", mustnewdir=FALSE) {
-  hasrvest <- require('rvest')
-  hasdwer <- require('downloader')
-  if(!hasrvest | !hasdwer) stop('rvesr or downloader was not installed.')
+  if (!requireNamespace("rvest", "downloader", quietly = TRUE)) {
+    stop("rvest and downloader needed. Please install them.",
+         call. = FALSE)
+  }
 
   lendir = nchar(dir)
   if(dir != "" & substr(dir, lendir, lendir) != "/")
@@ -825,6 +831,8 @@ write.meta4 <- function(urls, file = "") {
 }
 
 
+#' Calculate the spherical area of a grid.
+#'
 #' @description Calculate the grid area (km2) by providing the latitude of the centeroid
 #'              of the grid and the grid size.
 #' @param lat Latitude of the centeroid of the grid.

@@ -24,12 +24,13 @@ A dataframe containing the soil hydraulic parameters for each layer of each
         content at the wilting point).
 }
 \description{
-
+Create the hydraulic parameters of soil from soil property parameters for VIC model.
 }
 \details{
 This function is using the Saxton's formulars. If the soil property parametersis
-         HWSD, The property parameters are corresponding to T_GRAVEL, T_SAND, T_SILT, T_CLAY,
-         T_REF_BULK_DENSITY, and T_OC.
+         HWSD, The property parameters are corresponding to T_GRAVEL (fraction), T_SAND
+         (fraction), T_SILT (fraction), T_CLAY (fraction), T_REF_BULK_DENSITY (g/cm3),
+         and T_OC (fraction).
 }
 \references{
 Saxton, K. E, Rawls, W. J. Soil Water Characteristic Estimates by Texture
