@@ -1019,6 +1019,7 @@ flatten <- function(indata, points) {
 #' @return An list, including the array tranformed, and the corresponding
 #'         coordinates.
 #'
+#' @export
 geo2table <- function(arr, dimxy = NULL, x = NULL, y = NULL, mask = NULL) {
   dims <- dim(arr)
 
