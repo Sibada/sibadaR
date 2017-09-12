@@ -1,8 +1,6 @@
 
 
-###############################################################################
 #########################   Assistant Functions   #############################
-###############################################################################
 
 find_dim_lon <- function(ncfile, var = NULL) {
   if(is.character(var)) {
@@ -20,6 +18,7 @@ find_dim_lon <- function(ncfile, var = NULL) {
     if(ldn == "long" | ldn == 'lng' | ldn == 'lon' | ldn == 'longitude')
       return(dim_name)
   }
+  return('Null')
 }
 
 
@@ -39,6 +38,7 @@ find_dim_lat <- function(ncfile, var = NULL) {
     if(ldn == "lat" | ldn == 'la' | ldn == 'latitude')
       return(dim_name)
   }
+  return('Null')
 }
 
 find_dim_time <- function(ncfile, var = NULL) {
@@ -59,10 +59,9 @@ find_dim_time <- function(ncfile, var = NULL) {
     if(ldn == "time" | ldn == 'date' | ldn == 't')
       return(dim_name)
   }
+  return('Null')
 }
-############################################################################
-############################################################################
-############################################################################
+################################### depart ################################
 
 
 
@@ -100,6 +99,7 @@ list_ncvar <- function(file, show.dim = FALSE) {
   })
   vars
 }
+
 
 
 #' Quick build netCDF typical dimensions.
@@ -374,23 +374,22 @@ read_ascgrid <- function(file) {
 #' @param to A vector indicating the end of the values to be reading at each dimentions.
 #'           If byval = TRUE, it's regarded as the dimention value; If byval = FALSE,
 #'           it's regarded as the indexes.
-#' @param dims A vector indicating subset at which dimensions.
 #'
 #' @param lon A length 2 vector. Indicating the longitude range of the data to be get.
 #' @param lat A length 2 vector. Indicating the latitude range of the data to be get.
-#' @param time A length 2 vector. Indicating the time range of the data to be get.
 #'
-#' @param byval If set to TRUE, values of from and to would be regarded as dimension
-#'              values; If False, it would be regarded as indexes. Default TRUE.
 #' @param msize Maximum size (MB) of the data to be read. This is provide that too much data
 #'              read into memory. If < 0 it will regarded as unlimited. Default 2048 MB (2GB).
 #'
-#' @return The values of the data of the netCDF file.
+#' @return A list, including the data of the netCDF file and the dimensions values.
 #' @export
-read_ncvar <- function(file, var = NULL, from = NULL, to = NULL, dims = NULL,
-                       lon = NULL, lat = NULL, time = NULL, byval = TRUE, msize = 2048) {
+read_ncvar <- function(file, var = NULL, from = NULL, to = NULL,
+                       lon = NULL, lat = NULL, msize = 2048) {
+  # file = 'E:/meteodatas/CCI/ESACCI-SOILMOISTURE-L3S-SSMV-COMBINED-monthly-fv02.2.nc'
+  # var = NULL; from = NULL; to = NULL; dims = NULL; lon = NULL; lat = NULL; time = NULL
+  # tmp = read_ncvar('E:/meteodatas/CCI/ESACCI-SOILMOISTURE-L3S-SSMV-COMBINED-monthly-fv02.2.nc',
+  # lon=c(70,140), lat=c(15,60))
   nccon <- nc_open(file)
-  val <- NULL
   tryCatch ({
     if(!is.character(var)) {
       var <- nccon$var[[1]]$name
@@ -404,56 +403,26 @@ read_ncvar <- function(file, var = NULL, from = NULL, to = NULL, dims = NULL,
     dimlens <- nccon$var[[var]]$size
 
     # Preset getting range.
-    start <- rep(NA, ndims)
-    end <- rep(NA, ndims)
+    if(is.null(from)) from <- rep(1, ndims)
+    if(is.null(to)) to <- dimlens
 
-    # Find out the site of the indexed dims of all dims.
-    if(!is.character(dims)) {
-      dims <- alldims
-    } else if(any(!(dims %in% alldims))){
-      stop(sprintf("Dimention \"%s\" is not exist in the nc file.",
-                   dims[!(dims %in% alldims)]))
+    if(length(from) != ndims || length(to) != ndims) {
+      message(sprintf("The dimensions of variable \"%s\" are:", var))
+      print(data.frame(dim = alldims, length = dimlens))
+      stop("Lengths of from or to are incorrect.")
     }
-    dimsites <- sapply(dims, function(x) which(x == alldims))
 
+    from[is.na(from) | from == -1] <- 1
+    from[is.na(to) | to == -1] <- dimlens[is.na(to) | to == -1]
 
-    if(!is.numeric(from))
-      from <- start
-    if(!is.numeric(to))
-      to <- end
-    if(ndims < length(from) | ndims < length(to))
-      stop('length of from ,to or dim are incorrect.')
-
-    start[dimsites[1:length(from)]] <- from
-    end[dimsites[1:length(to)]] <- to
-
-    if(any(start > end, na.rm = T))
+    if(any(from > to, na.rm = T))
       stop('from could not greater than to.')
 
-    if(byval) {
-      dimvals <- sapply(dims, function(x) nccon$dim[[x]]$val)
-      start[is.na(start)] <- sapply(dimvals[is.na(start)], min)
-      end[is.na(end)] <- sapply(dimvals[is.na(end)], max)
-
-      inrange <- mapply(function(x, y, z)x[x >= y & x <= z],
-                 dimvals, start, end)
-      getlens <- sapply(inrange, length)
-      if(any(getlens <= 0)) return(val)
-
-      getstart <- mapply(function(x, y)which(x[1] == y), inrange, dimvals)
-    } else {
-      start[is.na(start) | start <= 0] <- 1
-      start[start > dimlens] <- dimlens[start > dimlens]
-      end[is.na(end)] <- dimlens[is.na(end)]
-      end[end <= 0] <- 1
-      end[end > dimlens] <- dimlens[end > dimlens]
-
-      getstart <- start
-      getlens <- dimlens - getstart + 1
-    }
+    from[from < 1] <- 1; from[from > dimlens] <- dimlens[from > dimlens]
+    to[to < 1] <- 1; to[to > dimlens] <- dimlens[to > dimlens]
 
     ####################### Special for lon, lat and time ########################
-    if(is.numeric(lon) && length(lon) >= 2) {
+    if(is.numeric(lon)) {
       nlon <- find_dim_lon(nccon)
       if(!(nlon %in% alldims))
         stop("Variable \"%s\" does not have longitude dimention.", var)
@@ -462,51 +431,50 @@ read_ncvar <- function(file, var = NULL, from = NULL, to = NULL, dims = NULL,
       if(is.na(lon[1])) lon[1] <- min(lonval)
       if(is.na(lon[2])) lon[2] <- max(lonval)
       if(lon[1] > lon[2])
-        lon[1:2] <- lon[2:1]
-      inrange <- lonval[lonval >= lon[1] & lonval <= lon[2]]
-      getlens[slon] <- length(inrange)
-      if(any(getlens[slon] <= 0)) return(val)
-      getstart[slon] <- which(inrange[1] == lonval)
+        stop("Min longtitude could not larger than max longitude.")
+
+      inrange <- which(lonval >= lon[1] & lonval <= lon[2])
+      rangelen <- length(inrange)
+      if(rangelen <= 0)
+        stop("Not any grid included in the given range of longitude.")
+      lonfrom <- inrange[1]
+      lonto <- inrange[rangelen]
+      from[slon] <- lonfrom
+      to[slon] <- lonto
     }
 
-    if(is.numeric(lat) && length(lat) >= 2) {
+    if(is.numeric(lat)) {
       nlat <- find_dim_lat(nccon)
       if(!(nlat %in% alldims))
         stop("Variable \"%s\" does not have latitude dimention.", var)
       slat <- which(nlat == alldims)
-      lonval <- nccon$dim[[nlat]]$val
-      if(is.na(lon[1])) lon[1] <- min(lonval)
-      if(is.na(lon[2])) lon[2] <- max(lonval)
+      latval <- nccon$dim[[nlat]]$val
+      if(is.na(lat[1])) lat[1] <- min(latval)
+      if(is.na(lat[2])) lat[2] <- max(latval)
       if(lat[1] > lat[2])
-        lat[1:2] <- lat[2:1]
-      inrange <- latval[latval >= lat[1] & latval <= lat[2]]
-      getlens[slat] <- length(inrange)
-      if(any(getlens[slat] <= 0)) return(val)
-      getstart[slat] <- which(inrange[1] == latval)
+        stop("Min latitude could not larger than max latitude.")
+
+      inrange <- which(latval >= lat[1] & latval <= lat[2])
+      rangelen <- length(inrange)
+      if(rangelen <= 0)
+        stop("Not any grid included in the given range of latitude.")
+      latfrom <- inrange[1]
+      latto <- inrange[rangelen]
+      from[slat] <- latfrom
+      to[slat] <- latto
+    }
+    ############################# end of lon, lat, time ########################
+
+    output <- list()
+    for(i in 1:ndims) {
+      dimvals <- nccon$dim[[alldims[i]]]$vals[from[i]:to[i]]
+      attr(dimvals, 'units') <- nccon$dim[[alldims[i]]]$units
+      if(!is.null(nccon$dim[[alldims[i]]]$calendar))
+        attr(dimvals, 'calendar') <- nccon$dim[[alldims[i]]]$calendar
+      output[[alldims[i]]] <- dimvals
     }
 
-    if(!is.null(time) && length(time) >= 2) {
-      ntime <- find_dim_time(nccon)
-      if(!(ntime %in% alldims))
-        stop("Variable \"%s\" does not have time dimention.", var)
-      stime <- which(ntime == alldims)
-      timeunits <- nccon$dim[[ntime]]$units
-      timeval <- num2time(nccon$dim[[ntime]]$val, timeunits)
-      if(is.na(time[1])) {
-        sttime <- as.POSIXct(time[1], tz='UTC')
-      } else {
-        sttime <- min(timeval)
-      }
-      if(is.na(time[2])) {
-        edtime <- as.POSIXct(time[2], tz='UTC')
-      } else {
-        edtime <- max(timeval)
-      }
-      inrange <- timeval[timeval >= time[1] & timeval <= time[2]]
-      getlens[stime] <- length(inrange)
-      if(any(getlens[stime] <= 0)) return(val)
-      getstart[stime] <- which(inrange[1] == timeval)
-    }
+    getlens <- to - from + 1
 
     size <- prod(getlens) / 131072 # Get data size to be read and convent to MB.
     if(msize > 0 & size > msize)
@@ -515,12 +483,13 @@ read_ncvar <- function(file, var = NULL, from = NULL, to = NULL, dims = NULL,
                    Please set msize (in MB) to enlarge the restrected size or set to -1 for unlimited.',
                    size, msize))
 
-    val <- ncvar_get(nccon, var, getstart, getlens)
+    val <- ncvar_get(nccon, var, from, getlens)
+    output$data <- val
   },
   finally = {
     nc_close(nccon)
   })
-  return(val)
+  return(output)
 }
 
 
@@ -1027,4 +996,83 @@ flatten <- function(indata, points) {
   outdata <- array(dim=c(dim(indata)[3], nrow(points)))
   for(i in 1:nrow(points)) outdata[ ,i] <- indata[rows[i], cols[i], ]
   outdata
+}
+
+#' Make 2d grid-like data to station-like table data
+#'
+#' @description Make the grid-like data to table-like data. For example,
+#'              an nc data has four dimensions, longitude, latitude, height
+#'              and time. Then it transfrom the data into a three dimensions
+#'              data, with grid, height and time as dimensions.
+#'              If the original data is a three dimension data (x, y and
+#'              time) then it would turn it to a table, each row is a time
+#'              step while each column is a grid.
+#' @param arr The array of the data to be transform.
+#' @param dimxy Which dimensions are the x and y. Default c(1, 2), which
+#'              means the first and second dimensions are x and y.
+#'
+#' @param x Coordinates of the x dimension.
+#' @param y Coordinates of the y dimension.
+#' @param mask An matrix with the same dim of x and y, marking which the
+#'             grids to be transform (NA means not be transform).
+#'
+#' @return An list, including the array tranformed, and the corresponding
+#'         coordinates.
+#'
+geo2table <- function(arr, dimxy = NULL, x = NULL, y = NULL, mask = NULL) {
+  dims <- dim(arr)
+
+  if(is.null(x) | is.null(y)) {
+    if(is.null(dimxy)) {
+      dimxy <- c(1, 2)
+    } else {
+      x <- 1:dims[dimxy[1]]
+      y <- 1:dims[dimxy[2]]
+    }
+  } else {
+    if (length(which(dims == length(x))) < 1 |
+        length(which(dims == length(y))) < 1) {
+      stop("Length of x and y are not fit to arr.")
+    }
+    dimxy <- 1:2
+    dimxy[1] <- which(dims == length(x))[1]
+    dimxy[2] <- which(dims == length(y))[1]
+  }
+
+  lenxy <- dims[dimxy]
+
+  if(is.null(mask)) {
+    mask <- apply(arr, dimxy, function(ia) {
+      ifelse(any(!is.na(ia)), 1, NA)
+    })
+  } else {
+    if(any(dim(mask)[1:2] != lenxy))
+      stop("Dim of mask is not corresponded to arr.")
+  }
+
+  mask[!is.na(mask)] <- 1
+  ng <- sum(mask, na.rm = T)
+
+  exitdim <- dims[-dimxy]
+  flat.arr <- array(dim = c(exitdim, ng))
+  blocksize <- prod(exitdim)
+
+  arr <- aperm(arr, c((1:length(dims))[-dimxy], dimxy))
+
+  lon <- c()
+  lat <- c()
+  sn <- 1
+  for(i in 1:lenxy[1]) {
+    for(j in 1:lenxy[2]) {
+      if(!is.na(mask[i, j])) {
+        spsite <- (j-1) * lenxy[1] + i
+        flat.arr[1:blocksize + (sn-1)*blocksize] <-
+          arr[(1:blocksize) + (spsite - 1)*blocksize]
+        lon[sn] <- x[i]
+        lat[sn] <- y[j]
+        sn <- sn + 1
+      }
+    }
+  }
+  return(list(arr = flat.arr, x = lon, y = lat))
 }

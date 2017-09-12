@@ -4,8 +4,8 @@
 \alias{read_ncvar}
 \title{Read data from nc file by one line code.}
 \usage{
-read_ncvar(file, var = NULL, from = NULL, to = NULL, dims = NULL,
-  lon = NULL, lat = NULL, time = NULL, byval = TRUE, msize = 2048)
+read_ncvar(file, var = NULL, from = NULL, to = NULL, lon = NULL,
+  lat = NULL, msize = 2048)
 }
 \arguments{
 \item{file}{String. File path of the netCDF file.}
@@ -20,22 +20,15 @@ it's regarded as the indexes.}
 If byval = TRUE, it's regarded as the dimention value; If byval = FALSE,
 it's regarded as the indexes.}
 
-\item{dims}{A vector indicating subset at which dimensions.}
-
 \item{lon}{A length 2 vector. Indicating the longitude range of the data to be get.}
 
 \item{lat}{A length 2 vector. Indicating the latitude range of the data to be get.}
-
-\item{time}{A length 2 vector. Indicating the time range of the data to be get.}
-
-\item{byval}{If set to TRUE, values of from and to would be regarded as dimension
-values; If False, it would be regarded as indexes. Default TRUE.}
 
 \item{msize}{Maximum size (MB) of the data to be read. This is provide that too much data
 read into memory. If < 0 it will regarded as unlimited. Default 2048 MB (2GB).}
 }
 \value{
-The values of the data of the netCDF file.
+A list, including the data of the netCDF file and the dimensions values.
 }
 \description{
 Using one line code to get data from netCDF file.
