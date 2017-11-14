@@ -12,8 +12,8 @@
 #' @param nlayer Num of layers of each gridcell.
 #'
 #' @return A dataframe containing the soil hydraulic parameters for each layer of each
-#'         gridcell. Including EXPT (Exponent), Ksat (Saturated hydrologic conductivity),
-#'         BUBLE (Bubbling pressure), BULKDN (Bulk density), WcrFT (Fractional soil
+#'         gridcell. Including EXPT (Exponent), Ksat (Saturated hydrologic conductivity, mm/d),
+#'         BUBLE (Bubbling pressure, cm), BULKDN (Bulk density), WcrFT (Fractional soil
 #'         moisture content at the critical point) and WpFT (Fractional soil moisture
 #'         content at the wilting point).
 #'
@@ -74,7 +74,7 @@ soil_convert <- function(soil_props, nlayer=3) {
     lamda <- 1/B
     Ks <- 1930*(thetas_33DF)**(3-lamda)
 
-    phie[phie<0] <- min(phie[phie>0])
+    phie[phie<0] <- min(phie[phie>0], na.rm = T)
     phie_cm <- phie * 10.19368
 
     ######################################################
@@ -116,7 +116,7 @@ soil_convert <- function(soil_props, nlayer=3) {
 #'               latitudes.
 #' @param elev A vector containing the elevation of each gridcell.
 #'
-#' @param soil_props A dataframe like what the function soil_convert needs.
+#' @param soil_hydraulic A dataframe of the output of soil_convert().
 #'
 #' @param anprec A vector containing the annual average precipitation of each gridcell.
 #'
@@ -136,11 +136,11 @@ soil_convert <- function(soil_props, nlayer=3) {
 #' @return A data frame containing the soil parameters needed by the VIC model. Can
 #'         be write to file use write.table for use.
 #'
-#' @import gstat
+#' @import fields
 #' @export
-create_soil_params <- function(coords, elev, soil_props, anprec, nlayer=3, avg_T=NA, quarzs=NA, organic=NA, Javg=NA) {
+create_soil_params <- function(coords, elev, soil_hydraulic, anprec, nlayer=3, avg_T=NA, quarzs=NA, organic=NA, Javg=NA) {
 
-  if(!(nrow(coords) == length(elev) & nrow(coords) == nrow(soil_props) & nrow(coords) == length(anprec))) {
+  if(!(nrow(coords) == length(elev) & nrow(coords) == nrow(soil_hydraulic) & nrow(coords) == length(anprec))) {
     stop("Input data has different rows.")
   }
   ncell <- nrow(coords)
@@ -148,19 +148,24 @@ create_soil_params <- function(coords, elev, soil_props, anprec, nlayer=3, avg_T
   lng <- coords[ ,1]
   lat <- coords[ ,2]
 
-  soil_hydraulic <- soil_convert(soil_props, nlayer=nlayer)
+  if(ncol(soil_hydraulic) != nlayer * 6)
+    stop("Incorrect columns of soil hydraulic parameter.")
   soil_hydraulic <- round(soil_hydraulic, 3)
+
   offgmt <- lng / 15
 
   # Create avg_T parameter by interaporation from global soil parameters dataset.
+  xmax = max(x) + 1.; ymax = max(y) + 1.
+  xmin = min(x) - 1.; ymin = min(y) - 1.
+
   if(is.na(avg_T)){
     avgT_o <- data.frame(x=VIC_global_soil$LNG, y=VIC_global_soil$LAT, z=VIC_global_soil$AVG_T)
-    coordinates(avgT_o) <- ~x + y
-    grids <- data.frame(x=lng, y=lat)
-    coordinates(grids) <- ~x + y
-    gridded(grids) <- TRUE
 
-    avg_T <- data.frame(idw(z~1, avgT_o, grids, nmax=4, maxdist=0.7071068, debug.level=0))[ , 3]
+    avgT_o <- avgT_o[avgT_o$x >= xmin & avgT_o$x <= xmax &
+                       avgT_o$y >= ymin & avgT_o$y <= ymax, ]
+
+    fit<- Tps(avgT_o[,1:2], avgT_o$z)
+    avg_T <- predict(fit, cbind(x, y))
   }
 
   # Create quarz parameters by interaporation from global soil parameters dataset.
@@ -173,13 +178,14 @@ create_soil_params <- function(coords, elev, soil_props, anprec, nlayer=3, avg_T
       } else {
         quarz_o <- quarz_os[ , l]
       }
-      quarz_o <- data.frame(x=VIC_global_soil$LNG, y=VIC_global_soil$LAT, z=quarz_o)
-      coordinates(quarz_o) <- ~x + y
-      grids <- data.frame(x=lng, y=lat)
-      coordinates(grids) <- ~x + y
-      gridded(grids) <- TRUE
 
-      quarz <- data.frame(idw(z~1, quarz_o, grids, nmax=4, maxdist=0.7071068, debug.level=0))[ , 3]
+      quarz_o <- data.frame(x=VIC_global_soil$LNG, y=VIC_global_soil$LAT, z=quarz_o)
+      quarz_o <- quarz_o[quarz_o$x >= xmin & quarz_o$x <= xmax &
+                           quarz_o$y >= ymin & quarz_o$y <= ymax, ]
+
+      fit<- Tps(quarz_o[,1:2], quarz_o$z)
+      quarz <- predict(fit, cbind(x, y))
+
       quarzs[sprintf('QUARZ%d', l)] <- quarz
     }
   } else {
