@@ -28,3 +28,4 @@ A date sequence.
 Quickly create a date sequence without write a mountain of
               "as.Date" and write the long argument "length.out = ".
 }
+

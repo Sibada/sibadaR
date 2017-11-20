@@ -13,3 +13,4 @@ write in a long line: "col.names = F, row.names = F" and it so inconvenient
 and troublesome. Now have this function we could not write it again.
 Other usage is as same as write.table.
 }
+

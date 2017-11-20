@@ -977,26 +977,66 @@ nc_intercept <- function(file, out_file, from = NULL, to = NULL, dims = NULL,
   })
 }
 
+#' Make table-like array to 2d geo-like array
+#'
+#' @description Make the table-like data to grid-like data. For example,
+#'              an arrray has three dimensions, station, height and time.
+#'              Then it transfrom the data into a four dimensions
+#'              data, with longitude, latitude, height and time as
+#'              dimensions. If the original data is a 2d data (grid and
+#'              time) then it would turn it to a 3d array. the coordinates
+#'              of the grids must be grid-like.
+#' @param arr The array of the data to be transform.
+#' @param x,y Coordinates of the grids.
+#'
+#' @param csize Cell size of the grids.
+#' @param y Coordinates of the y dimension.
+#' @param dimpnt Site of the dimension difine the location of grids.
+#'
+#' @return An list, including the array tranformed, and the corresponding
+#'         coordinates.
+#'
+#' @export
+table2geo <- function(arr, x, y, csize = NULL, dimpnt = NULL, dgt = 5) {
+  dims <- dim(arr)
+  ldim <- length(dims)
+  if(is.null(dimpnt)) {
+    dimpnt <- which(dims == length(x))[1]
+    if(is.na(dimpnt)) stop('All dimensions of arr not fit to x and y.')
+  }
+  if(length(dimpnt > 1)) dimpnt <- dimpnt[1]
+  if(dims[dimpnt] != length(x) | length(x) != length(y))
+    stop('Dimension of points not fit to x and y.')
+  if(is.null(csize)) {
+    csize <- min(c(diff(sort(unique(round(x, dgt)))),
+                   diff(sort(unique(round(y, dgt))))))
+  }
 
+  row <- x/csize - min(x/csize) + 1
+  col <- y/csize - min(y/csize) + 1
+  nrow <- max(row)
+  ncol <- max(col)
 
-flatten <- function(indata, points) {
-  xs <- points[, 1]
-  ys <- points[, 2]
-  ux <- sort(unique(xs))
-  uy <- sort(unique(ys))
-  lx <- length(ux)
-  ly <- length(uy)
-  itvx <- ux[2:lx] - ux[1:(lx - 1)]
-  itvy <- uy[2:ly] - uy[1:(ly - 1)]
-  csizex <- as.numeric(names(which.max(table(itvx))))
-  csizey <- as.numeric(names(which.max(table(itvy))))
+  newdim <- dims
+  newdim <- c(dims[-dimpnt], nrow, ncol)
+  nldim <- length(newdim)
 
-  rows <- xs/csizex; rows <- round(rows - min(rows) + 1)
-  cols <- ys/csizey; cols <- round(cols - min(cols) + 1)
-  outdata <- array(dim=c(dim(indata)[3], nrow(points)))
-  for(i in 1:nrow(points)) outdata[ ,i] <- indata[rows[i], cols[i], ]
-  outdata
+  arr <- aperm(arr, c((1:ldim)[-dimpnt], dimpnt))
+  newarr <- array(dim = newdim)
+  blocksize <- prod(dims[-dimpnt])
+
+  for(i in 1:dims[dimpnt]) {
+    ir <- row[i]; ic <- col[i]
+    spsite <- (ic-1) * nrow + ir
+    newarr[(1:blocksize) + (spsite - 1)*blocksize] <-
+      arr[(1:blocksize) + (i-1)*blocksize]
+  }
+
+  newarr <- aperm(newarr, c(nldim-1, nldim, (1:nldim)[1:(nldim-2)]))
+  list(arr = newarr, x = sort(unique(x)), y = sort(unique(y)))
+
 }
+
 
 #' Make 2d grid-like data to station-like table data
 #'

@@ -18,8 +18,8 @@ second soil layer, and so on.}
 }
 \value{
 A dataframe containing the soil hydraulic parameters for each layer of each
-        gridcell. Including EXPT (Exponent), Ksat (Saturated hydrologic conductivity),
-        BUBLE (Bubbling pressure), BULKDN (Bulk density), WcrFT (Fractional soil
+        gridcell. Including EXPT (Exponent), Ksat (Saturated hydrologic conductivity, mm/d),
+        BUBLE (Bubbling pressure, cm), BULKDN (Bulk density), WcrFT (Fractional soil
         moisture content at the critical point) and WpFT (Fractional soil moisture
         content at the wilting point).
 }
@@ -37,3 +37,4 @@ Saxton, K. E, Rawls, W. J. Soil Water Characteristic Estimates by Texture
             and Organic Matter for Hydrologic Solutions[J]. Soil Science Society of
             America Journal, 2006, 70(5):1569-1578.
 }
+

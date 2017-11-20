@@ -574,6 +574,10 @@ wt <- function(x, file = "", ...) {
 #' @return Nai
 #' @description Hei hei hei
 #' @details Zui hou zhu ni, shen ti jian kang. Zai jian.
+#'
+#' @import rvest
+#' @import downloader
+#'
 #' @export
 get_nh <- function(aurl, dir = "", mustnewdir=FALSE) {
   if (!requireNamespace("rvest", "downloader", quietly = TRUE)) {
@@ -844,3 +848,97 @@ grid_area <- function(lat, csize){
   6371.229**2 * csize*pi/180 * (sin((lat+csize/2)*pi/180) - sin((lat-csize/2)*pi/180))
 }
 
+
+
+#' Pearson type III distribuion
+#'
+#' @description Density, distribution function, quantile
+#'              function and random generation for the
+#'              Pearson type III distribution with
+#'              parameters `xm`, `Cv` and `Cs`.
+#' @param x,q vector of quantiles.
+#' @param p vector of probabilities.
+#' @param n number of observations. If `length(n) > 1`,
+#'          the length is taken to be the number required.
+#' @param xm Mean of the distribution.
+#' @param Cv Variation coefficient of the distribution.
+#' @param Cs Deviation coefficient of the distribution.
+#' @param lower.tail logical; if TRUE (default),
+#'                   probabilities are `P[X ≤ x]`,
+#'                   otherwise, `P[X > x]`.
+#' @return `dPearson3` gives the density, `pPearson3` gives the
+#'         distribution function, `qPearson3` gives the quantile
+#'         function, and `rPearson3` generates random deviates.
+#'
+#' @name Pearson3
+#' @export
+dPearson3 <- function(x, xm, Cv, Cs) {
+  a0 <- xm * (1-2*Cv/Cs)
+  alpha <- 4/(Cs**2)
+  beta <- 2/(xm*Cv*Cs)
+  dgamma(x - a0, alpha, beta)
+}
+
+#' @rdname Pearson3
+#' @export
+pPearson3 <- function(q, xm, Cv, Cs, lower.tail = TRUE) {
+  a0 <- xm * (1-2*Cv/Cs)
+  alpha <- 4/(Cs**2)
+  beta <- 2/(xm*Cv*Cs)
+  pgamma(q - a0, alpha, beta, lower.tail = lower.tail)
+}
+
+#' @rdname Pearson3
+#' @export
+qPearson3 <- function(p, xm, Cv, Cs, lower.tail = TRUE) {
+  a0 <- xm * (1-2*Cv/Cs)
+  alpha <- 4/(Cs**2)
+  beta <- 2/(xm*Cv*Cs)
+  qgamma(p, alpha, beta, lower.tail = lower.tail) + a0
+}
+
+#' @rdname Pearson3
+#' @export
+rPearson3 <- function(n, xm, Cv, Cs) {
+  a0 <- xm * (1-2*Cv/Cs)
+  alpha <- 4/(Cs**2)
+  beta <- 2/(xm*Cv*Cs)
+  rgamma(n, alpha, beta) + a0
+}
+
+
+#' Fit the Pearson type III distribuion
+#'
+#' @description Using a Pearson III distribution to fit the streamflow
+#'              sequence.
+#' @param sfs Sequence of streamflow.
+#' @param init Vector of initiate parameters of P-III distribution,
+#'             must be c(xm, Cv, Cs). It can estimate when not offering.
+#'
+#' @return A list including the estimated parameters, and a function
+#'         to calculate the frequency of a certern flood (freq), and a
+#'         function to calculate streamflow of a certern frequency (qnt).
+#' @import MASS
+#' @export
+fitPearson3 <- function(sfs, init = NULL) {
+  if(is.null(init) || length(init) < 3
+     || typeof(init) != 'double') {
+    xm <- mean(sfs)
+    Cv <- sd(sfs/xm)
+    Cs <- sum((sfs/xm-1)**3)/(length(sfs)-3)/Cv**3
+    init <- c(xm, Cv, Cs)
+  }
+  fitresult <- fitdistr(sfs, dPearson3,
+                        list(xm = init[1],
+                             Cv = init[2],
+                             Cs = init[3]))
+  fitted <- fitresult$estimate
+  qnt <- function(p) qPearson3(p, fitted[1], fitted[2], fitted[3],
+                               lower.tail = F)
+  freq <- function(q) pPearson3(q, fitted[1], fitted[2], fitted[3],
+                                lower.tail = F)
+  out <- list(fitted = fitted,
+              qnt = qnt,
+              freq = freq)
+  out
+}

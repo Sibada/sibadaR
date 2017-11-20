@@ -18,3 +18,4 @@ Area of the grid (km2).
 Calculate the grid area (km2) by providing the latitude of the centeroid
              of the grid and the grid size.
 }
+

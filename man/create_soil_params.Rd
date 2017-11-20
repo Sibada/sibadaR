@@ -4,8 +4,8 @@
 \alias{create_soil_params}
 \title{Create the soil parameters for VIC model.}
 \usage{
-create_soil_params(coords, elev, soil_props, anprec, nlayer = 3, avg_T = NA,
-  quarzs = NA, organic = NA, Javg = NA)
+create_soil_params(coords, elev, soil_hydraulic, anprec, nlayer = 3,
+  avg_T = NA, quarzs = NA, organic = NA, Javg = NA)
 }
 \arguments{
 \item{coords}{A data frame containing ongitude and latitude coordinate of the gridcells.
@@ -14,7 +14,7 @@ latitudes.}
 
 \item{elev}{A vector containing the elevation of each gridcell.}
 
-\item{soil_props}{A dataframe like what the function soil_convert needs.}
+\item{soil_hydraulic}{A dataframe of the output of soil_convert().}
 
 \item{anprec}{A vector containing the annual average precipitation of each gridcell.}
 
@@ -39,3 +39,4 @@ A data frame containing the soil parameters needed by the VIC model. Can
 Create the soil parameters for VIC model by offering coordinates, elevations
              and other datas. Each row of each data must be corresponding to a gridcell.
 }
+

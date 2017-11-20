@@ -15,3 +15,4 @@ A chart showing line types with its ID.
 \description{
 Quickly get what line types look like in ggplot2.
 }
+

@@ -18,3 +18,4 @@ A vector of the variable names.
 \description{
 Show the variables or their dimensions of a netCDF file.
 }
+

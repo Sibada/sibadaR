@@ -15,3 +15,4 @@ A grid data in list type, including nrows, ncols, xllcorner, yllcorner and cells
 \description{
 Read the grid data from ArcInfo type ASCII file.
 }
+

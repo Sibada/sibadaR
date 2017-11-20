@@ -27,3 +27,4 @@ Plot or values of UF and UB series from M-K mutation test.
 \description{
 Make Mann-Kendall mutation test and draw plot. Where the UF and UB curve cross means a mutation may be happen.
 }
+

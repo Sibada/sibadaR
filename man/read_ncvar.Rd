@@ -33,3 +33,4 @@ A list, including the data of the netCDF file and the dimensions values.
 \description{
 Using one line code to get data from netCDF file.
 }
+

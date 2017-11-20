@@ -2,7 +2,7 @@ Package: sibadaR
 Type: Package
 Title: Sibada's accumulated R scripts for next probably use to avoid reinventing
     the wheel.
-Version: 0.1.0
+Version: 0.1.1
 Author: Sibada
 Maintainer: Sibada <zrd2017@163.com>
 Description: Before, I always write some pieces of code abitrarily and throw
@@ -22,15 +22,14 @@ Imports:
     xts,
     reshape2,
     lubridate,
-    gstat,
-    sp,
     ncdf4,
     shape,
     rjson,
     maptools
 Suggests:
     rvest,
+    MASS,
     downloader
 URL: https://github.com/Sibada/sibadaR
 BugReports: https://github.com/Sibada/sibadaR/issues
-RoxygenNote: 6.0.1
+RoxygenNote: 5.0.1

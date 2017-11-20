@@ -16,3 +16,4 @@ A grid data in list type, including x, y, xllcorner,
 \description{
 Read the grid data from ArcInfo type ASCII file.
 }
+

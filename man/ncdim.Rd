@@ -2,8 +2,8 @@
 % Please edit documentation in R/nc4_relevents.R
 \name{ncdim}
 \alias{ncdim}
-\alias{ncdim_lon}
 \alias{ncdim_lat}
+\alias{ncdim_lon}
 \alias{ncdim_time}
 \title{Quick build netCDF typical dimensions.}
 \usage{
@@ -41,3 +41,4 @@ A netCDF dimension object.
 \description{
 Quick build typical netCDF dimensions like longitude, latitude and time.
 }
+

@@ -19,3 +19,4 @@ FAR of the evaluated series and the reference series.
 \description{
 False alarm ratio of the estimation, like precipitation.
 }
+

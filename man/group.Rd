@@ -23,3 +23,4 @@ A character vector when offering a single text, or a list containing
 Extrect the sub strings by offering a pattern, which can
              be regular expression in R.
 }
+

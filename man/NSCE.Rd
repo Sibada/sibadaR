@@ -17,3 +17,4 @@ Nash-Sutcliffe coefficient of efficiency of sim and obs series.
 \description{
 Calculate Nash-Sutcliffe coefficient of efficiency of two data series.
 }
+

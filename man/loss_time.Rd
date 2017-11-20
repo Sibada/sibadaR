@@ -15,3 +15,4 @@ The time stamp lost in the time series.
 \description{
 Get the deficiency of the time series.
 }
+
