@@ -824,7 +824,7 @@ write.meta4 <- function(urls, file = "") {
   mtlg <- paste('<file name="',
                filenames,'" a0:num="',1:length(urls),
                '" a0:startDate="1488501103335"><url priority="100" a0:usable="',
-               urls, '">', urls, '</url></file>')
+               urls, '">', urls, '</url></file>', sep = '')
   mtlh <- paste('<?xml version="1.0"?><metalink xmlns="urn:ietf:params:xml:ns:metalink" ',
                 'version="4.0" a0:version="3.0.8" ',
                 'xmlns:a0="http://www.downthemall.net/properties#"><generator>',

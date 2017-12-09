@@ -413,7 +413,7 @@ read_ncvar <- function(file, var = NULL, from = NULL, to = NULL,
     }
 
     from[is.na(from) | from == -1] <- 1
-    from[is.na(to) | to == -1] <- dimlens[is.na(to) | to == -1]
+    from[is.na(to) | to == -1] <- Inf
 
     if(any(from > to, na.rm = T))
       stop('from could not greater than to.')
@@ -588,7 +588,7 @@ write_ncvar <- function(val, file, var, dims = c(), newvar = FALSE, units = 'NUL
 #' @export
 nc_combine_time <- function(fs, out_file, from = NULL, to = NULL, datum_nc = 1, compression = NA, slip = 30) {
 
-  if(length(fs) < 1)
+  if(length(fs) < 2)
     stop('Number of input files should more than one.')
 
   if(is.null(from))
@@ -598,22 +598,37 @@ nc_combine_time <- function(fs, out_file, from = NULL, to = NULL, datum_nc = 1, 
 
   message('Collecting infos...')
 
+  ncf <- nc_open(fs[datum_nc])
+  tdname <- find_dim_time(ncf)
+  timeinfo <- ncf$dim[[tdname]]
+  tunits <- timeinfo$units
+  tstep <- strsplit(tunits, ' since ')[[1]][1]
+  tsince <- strsplit(tunits, ' since ')[[1]][2]
+  calendar <- timeinfo$calendar
+  if(is.null(calendar))
+    stop('Attribute "calendar" of time must be provided.')
+
+  vars <- names(ncf$var)
+
+
+  global_attrs <- ncatt_get(ncf, 0)
+
+  nc_close(ncf)
+
   tlen <- c()
-  tunits <- c()
-  calendars <- c()
+  tsinces <- c()
   tvals <- list()
 
-  if(length(slip) < length(fs) - 1)
-    slip <- rep(slip[1], length(fs))
+  # if(length(slip) < length(fs) - 1)
+  #   slip <- rep(slip[1], length(fs))
 
   for(i in 1:length(fs)) {
     ncf <- nc_open(fs[i])
     tdname <- find_dim_time(ncf)
     timeinfo <- ncf$dim[[tdname]]
-    tunits[i] <- timeinfo$units
+    tsinces[i] <- strsplit(timeinfo$units, ' since ')[[1]][2]
     tvals[[i]] <- timeinfo$vals
     tlen[i] <- length(tvals[[i]])
-    calendars[i] <- timeinfo$calendar
     nc_close(ncf)
     if(to[i] <= 0 | to[i] > tlen[i]) to[i] <- tlen[i]
     if(from[i] <= 0 | from[i] > tlen[i]) from[i] <- tlen[i]
@@ -621,32 +636,31 @@ nc_combine_time <- function(fs, out_file, from = NULL, to = NULL, datum_nc = 1, 
   allfrom <- cumsum(to - from + 1) - (to - from)
 
   # Define values of the new time dimension.
+  tfracs <- c(days = 86400, hours = 3600,
+             minutes = 60, seconds = 1)
+  tfrac <- tfracs[tstep]
+  if(is.na(tfrac)) tfrac = 86400 # default see as daily.
+
+  movevs <- 0
   timev <- tvals[[1]][from[1]:to[1]]
   for(i in 2:length(fs)) {
-    if (tunits[i] == tunits[1]) {
-      timev <- append(timev, tvals[[i]][from[i]:to[i]])
-    } else {
-      movev <- timev[length(timev)] - tvals[[i]][1] + slip[i]
-      itimev <- tvals[[i]] + movev
-      timev <- append(timev, itimev[from[i]:to[i]])
-      message(sprintf('Time move by %f', movev))
-    }
+    movev <- (as.PCICt(tsinces[i], calendar) -
+      as.PCICt(tsince, calendar))/tfrac
+    movevs[i] <- movev
+    itimev <- tvals[[i]] + movev
+    timev <- append(timev, itimev[from[i]:to[i]])
+    message(sprintf('Time move by %.3f', movev))
+
   }
 
-  if(is.null(calendars[1])) calendars[1] <- 'proleptic_gregorian'
-  dtime <- ncdim_def('time', tunits[1], timev, calendar = calendars[1])
+  dtime <- ncdim_def('time', tunits, timev, calendar = calendar)
 
+  # Create new variable objects.
   ncf <- nc_open(fs[datum_nc])
-  tdname <- find_dim_time(ncf)
-  newdims <- ncf$dim
-  newdims[[tdname]] <- dtime
-
-  vars <- names(ncf$var)
   varinfos <- list()
   attrs <- list()
   newvars <- list()
 
-  # Write in the data and attributes of the old nc files.
   for(var in vars) {
     varinfo <- ncf$var[[var]]
     dims <-  sapply(varinfo$dim, function(x)x$name)
@@ -657,27 +671,30 @@ nc_combine_time <- function(fs, out_file, from = NULL, to = NULL, datum_nc = 1, 
     attrs[[var]] <- attr
     varinfos[[var]] <- list(dims = dims, size = size)
 
-    vardims <- list()
+    ncfdims <- ncf$dim
+    newdims <- list()
     if(length(dims) != 0)
       for (i in 1:length(dims)) {
-        vardims[[i]] <- newdims[[dims[i]]]
+        newdims[[dims[i]]] <- ncfdims[[dims[i]]]
       }
+    if(!is.null(newdims$time))
+      newdims$time <- dtime
     newvar <- ncvar_def(var, 'NONE',
-                        vardims,
+                        newdims,
                         compression = compression)
     newvars[[var]] <- newvar
   }
-  global_attrs <- ncatt_get(ncf, 0)
-
   nc_close(ncf)
 
-
+  # Write in the data and attributes of the old nc files.
   nncf <- nc_create(out_file, newvars, force_v4 = TRUE)
+
   for(var in vars)
     for(attr in names(attrs[[var]])){
       ncatt_put(nncf, var, attr, attrs[[var]][[attr]])
     }
 
+  # Write all nc values.
   for(i in 1:length(fs)) {
     f <- fs[i]
     message(paste("Combing file ", f, '...', sep=''))
@@ -701,10 +718,11 @@ nc_combine_time <- function(fs, out_file, from = NULL, to = NULL, datum_nc = 1, 
       ilen <- ito - ifrom + 1
 
       val <- ncvar_get(ncf, var, ifrom, ilen)
+      if(var == 'time_bnds')
+        val <- val + movevs[i]
       ncvar_put(nncf, var, val, iwfrom, ilen)
       rm(val)
     }
-
     nc_close(ncf)
   }
   nc_close(nncf)

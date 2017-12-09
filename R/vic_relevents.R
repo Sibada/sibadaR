@@ -95,12 +95,11 @@ soil_convert <- function(soil_props, nlayer=3) {
     soil_hydro_params[, l + nlayer*4] <- WcrFT
     soil_hydro_params[, l + nlayer*5] <- WpFT
 
-    names(soil_hydro_params)[l] <- sprintf("EXPT_%d", l)
-    names(soil_hydro_params)[l + nlayer] <- sprintf("Ksat_%d", l)
-    names(soil_hydro_params)[l + nlayer*2] <- sprintf("BUBLE%d", l)
-    names(soil_hydro_params)[l + nlayer*3] <- sprintf("BULKDN%d", l)
-    names(soil_hydro_params)[l + nlayer*4] <- sprintf("WcrFT%d", l)
-    names(soil_hydro_params)[l + nlayer*5] <- sprintf("WpFT%d", l)
+
+    names(soil_hydro_params)[l+nlayer*0:5] <-
+      sprintf(c("EXPT_%d","Ksat_%d","BUBLE%d",
+                "BULKDN%d","WcrFT%d","WpFT%d"), l)
+
   }
 
   return(soil_hydro_params)
@@ -151,12 +150,17 @@ create_soil_params <- function(coords, elev, soil_hydraulic, anprec, nlayer=3, a
   if(ncol(soil_hydraulic) != nlayer * 6)
     stop("Incorrect columns of soil hydraulic parameter.")
   soil_hydraulic <- round(soil_hydraulic, 3)
+  for(l in 1:nlayer) {
+    names(soil_hydraulic)[l+nlayer*0:5] <-
+      sprintf(c("EXPT_%d","Ksat_%d","BUBLE%d",
+                "BULKDN%d","WcrFT%d","WpFT%d"), l)
+  }
 
   offgmt <- lng / 15
 
   # Create avg_T parameter by interaporation from global soil parameters dataset.
-  xmax = max(x) + 1.; ymax = max(y) + 1.
-  xmin = min(x) - 1.; ymin = min(y) - 1.
+  xmax = max(lng) + 1.; ymax = max(lat) + 1.
+  xmin = min(lng) - 1.; ymin = min(lat) - 1.
 
   if(is.na(avg_T)){
     avgT_o <- data.frame(x=VIC_global_soil$LNG, y=VIC_global_soil$LAT, z=VIC_global_soil$AVG_T)
@@ -165,7 +169,7 @@ create_soil_params <- function(coords, elev, soil_hydraulic, anprec, nlayer=3, a
                        avgT_o$y >= ymin & avgT_o$y <= ymax, ]
 
     fit<- Tps(avgT_o[,1:2], avgT_o$z)
-    avg_T <- predict(fit, cbind(x, y))
+    avg_T <- predict(fit, cbind(lng, lat))
   }
 
   # Create quarz parameters by interaporation from global soil parameters dataset.
@@ -184,7 +188,7 @@ create_soil_params <- function(coords, elev, soil_hydraulic, anprec, nlayer=3, a
                            quarz_o$y >= ymin & quarz_o$y <= ymax, ]
 
       fit<- Tps(quarz_o[,1:2], quarz_o$z)
-      quarz <- predict(fit, cbind(x, y))
+      quarz <- predict(fit, cbind(lng, lat))
 
       quarzs[sprintf('QUARZ%d', l)] <- quarz
     }

@@ -25,7 +25,8 @@ Imports:
     ncdf4,
     shape,
     rjson,
-    maptools
+    maptools,
+    PCICt
 Suggests:
     rvest,
     MASS,
