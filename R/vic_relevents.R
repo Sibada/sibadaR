@@ -82,7 +82,7 @@ soil_convert <- function(soil_props, nlayer=3) {
     Ksat <- Ks * 24  # Convert from mm/h to mm/day
     BUBLE <- phie_cm
     BULKDN <- rhoDF * 1000
-    WcrFT <- theta33DF/thetasDF
+    WcrFT <- theta33DF/thetasDF * 0.7
     WpFT <- theta1500/thetasDF
 
     WcrFT[WcrFT > 1] <- 1.0

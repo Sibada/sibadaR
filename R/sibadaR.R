@@ -942,3 +942,18 @@ fitPearson3 <- function(sfs, init = NULL) {
               freq = freq)
   out
 }
+
+
+#' qplot of the grid data.
+#'
+#' @description A qplot function of ggplot2 for grid data.
+#' @param x,y Coordinates of the grid cells.
+#' @param ... Aesthetics passed into each layer.
+#' @param z Values of the grid cells.
+#' @param data Data frame to use (optional).
+#' @param facets Faceting formula to use.
+#'
+#' @export
+qplot_grid <- function(x, y, z, ..., data=NULL, facets = NULL) {
+  qplot(x, y, ..., fill = z, data = data, facets = facets, geom = 'tile') + coord_quickmap()
+}

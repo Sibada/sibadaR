@@ -1074,24 +1074,36 @@ table2geo <- function(arr, x, y, csize = NULL, dimpnt = NULL, dgt = 5) {
 #' @param mask An matrix with the same dim of x and y, marking which the
 #'             grids to be transform (NA means not be transform).
 #'
+#' @param xy A series of coordinates of the grid cells to be transform.
+#'
 #' @return An list, including the array tranformed, and the corresponding
 #'         coordinates.
 #'
 #' @export
-geo2table <- function(arr, dimxy = NULL, x = NULL, y = NULL, mask = NULL) {
+geo2table <- function(arr, dimxy = NULL, x = NULL, y = NULL, mask = NULL, xy = NULL) {
   dims <- dim(arr)
 
+  rs <- cs <- NULL
+  if(!is.null(xy)) {
+    ix <- xy[,1]; iy = xy[,2]
+    x <- sort(unique(ix))
+    y <- sort(unique(iy))
+    cx <- min(round(diff(x), 8))
+    cy <- min(round(diff(x), 8))
+    rs <- round((ix-min(ix))/cx + 1)
+    cs <- round((iy-min(iy))/cy + 1)
+  }
   if(is.null(x) | is.null(y)) {
     if(is.null(dimxy)) {
       dimxy <- c(1, 2)
-    } else {
-      x <- 1:dims[dimxy[1]]
-      y <- 1:dims[dimxy[2]]
     }
+    x <- 1:dims[dimxy[1]]
+    y <- 1:dims[dimxy[2]]
+
   } else {
     if (length(which(dims == length(x))) < 1 |
-        length(which(dims == length(y))) < 1) {
-      stop("Length of x and y are not fit to arr.")
+          length(which(dims == length(y))) < 1) {
+        stop("Length of x and y are not fit to arr.")
     }
     dimxy <- 1:2
     dimxy[1] <- which(dims == length(x))[1]
@@ -1109,8 +1121,20 @@ geo2table <- function(arr, dimxy = NULL, x = NULL, y = NULL, mask = NULL) {
       stop("Dim of mask is not corresponded to arr.")
   }
 
-  mask[!is.na(mask)] <- 1
-  ng <- sum(mask, na.rm = T)
+
+  if(is.null(rs) | is.null(cs)) {
+    mask[!is.na(mask)] <- 1
+    rs <- c(); cs <- c()
+    for(i in 1:lenxy[1]) {
+      for(j in 1:lenxy[2]) {
+        if(!is.na(mask[i, j])) {
+          rs <- append(rs, i)
+          cs <- append(cs, j)
+        }
+      }
+    }
+  }
+  ng <- length(rs)
 
   exitdim <- dims[-dimxy]
   flat.arr <- array(dim = c(exitdim, ng))
@@ -1121,17 +1145,14 @@ geo2table <- function(arr, dimxy = NULL, x = NULL, y = NULL, mask = NULL) {
   lon <- c()
   lat <- c()
   sn <- 1
-  for(i in 1:lenxy[1]) {
-    for(j in 1:lenxy[2]) {
-      if(!is.na(mask[i, j])) {
-        spsite <- (j-1) * lenxy[1] + i
-        flat.arr[1:blocksize + (sn-1)*blocksize] <-
-          arr[(1:blocksize) + (spsite - 1)*blocksize]
-        lon[sn] <- x[i]
-        lat[sn] <- y[j]
-        sn <- sn + 1
-      }
-    }
+  for(g in 1:ng) {
+    i <- rs[g]; j <- cs[g]
+    spsite <- (j-1) * lenxy[1] + i
+    flat.arr[1:blocksize + (sn-1)*blocksize] <-
+      arr[(1:blocksize) + (spsite - 1)*blocksize]
+    lon[sn] <- x[i]
+    lat[sn] <- y[j]
+    sn <- sn + 1
   }
   return(list(arr = flat.arr, x = lon, y = lat))
 }

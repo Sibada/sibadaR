@@ -4,7 +4,8 @@
 \alias{geo2table}
 \title{Make 2d grid-like data to station-like table data}
 \usage{
-geo2table(arr, dimxy = NULL, x = NULL, y = NULL, mask = NULL)
+geo2table(arr, dimxy = NULL, x = NULL, y = NULL, mask = NULL,
+  xy = NULL)
 }
 \arguments{
 \item{arr}{The array of the data to be transform.}
@@ -18,6 +19,8 @@ means the first and second dimensions are x and y.}
 
 \item{mask}{An matrix with the same dim of x and y, marking which the
 grids to be transform (NA means not be transform).}
+
+\item{xy}{A series of coordinates of the grid cells to be transform.}
 }
 \value{
 An list, including the array tranformed, and the corresponding
