@@ -29,13 +29,14 @@ mk <- function (x, sen.slope = TRUE, p.value = TRUE) {
 
   if(sen.slope){
     sen <- c()
-    #senr <- c()
+    senr <- c()
     for(k in 2:n) {
       kslo <- (x[k] - x[1:(k-1)]) / (t[k] - t[1:(k-1)])
       sen <- append(sen, kslo)
-      #senr <- append(senr, kslo/x[1:(k-1)])
+      senr <- append(senr, kslo/x[1:(k-1)])
     }
-    mk.results <- c(mk.results, sen.slope = median(sen))
+    mk.results <- c(mk.results, sen.slope = median(sen),
+                    sen.slope.rel = median(senr))
   }
   mk.results
 }
@@ -127,7 +128,6 @@ season.apply <- function(x, INDEX, FUN, ...)
 #'
 #' @export
 MK_test <- function (x, sen.slope = TRUE, p.value = TRUE) {
-  mk
   if (is.null(dim(x)))
     return(mk(x))
   if (ncol(x) == 1)

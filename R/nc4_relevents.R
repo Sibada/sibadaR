@@ -156,7 +156,7 @@ ncdim_lat <- function(vals = NULL, from = NULL, csize = NULL, len = NULL, name =
 #' @export
 ncdim_time <- function(time, name = 'time', calendar = 'proleptic_gregorian', ...) {
   ptime <- time2num(time, ...)
-  dim_time <- ncdim_def(name, vals = ptime$val, units = ptime$units, calendar = calendar)
+  dim_time <- ncdim_def(name, vals = ptime, units = ptime[['units']], calendar = calendar)
   dim_time
 }
 
@@ -179,101 +179,62 @@ ncdim_time <- function(time, name = 'time', calendar = 'proleptic_gregorian', ..
 #'
 #' @name nctime
 #' @export
-time2num <- function(time, since = time[1], freq = NULL, tz = 'UTC') {
+time2num <- function(time, since = time[1], freq = NULL, tz = 'GMT') {
   if(is.character(since) && grepl('since', since)) {
     units_esm <- strsplit(since, '\\ssince\\s')[[1]]
     since <- units_esm[2]
   }
-  since <- as.POSIXct(since, tz = "UTC")
+  since <- as.POSIXct(since, tz = tz)
 
-  time <- as.POSIXct(time, tz = 'UTC')
+  time <- as.POSIXct(time, tz = tz)
   tnum <- as.numeric(time) - as.numeric(since)
 
   if(is.null(freq)) {
     if(length(time) == 1) {
       freq <- 'day'
     } else {
-      numintv <- mean(tnum[2:length(time)] - tnum[1:(length(time)-1)])
-      if(numintv >= 31536000) {
-        freq <- 'year'
-      } else if(numintv >= 259200){
-        freq <- 'month'
-      } else if(numintv >= 86399){
+      numintv <- mean(diff(tnum))
+      if(numintv >= 86399){
         freq <- 'day'
-        intv <- 86400
       } else if(numintv >= 3599){
         freq <- 'hour'
-        intv <- 3600
       } else if(numintv >= 59){
         freq <- 'minute'
-        intv <- 60
       } else {
         freq <- 'second'
-        intv <- 1
       }
     }
   }
 
-  if(freq %in% c('year', 'month')) {
-    if(freq == 'month') {
-      cumu.mon <- month(time) + (year(time) - 1) * 12
-      since.mon <- month(since) + (year(since) - 1) * 12
-      time.vals <- cumu.mon - since.mon
-    } else {
-      time.vals <- year(time) - year(since)
-    }
-    units <- paste(freq, 's since ', format(since, '%Y-%m-%d'), sep = '')
-
+  if(freq == 'day'){
+    intv <- 86400
+  } else if(freq == 'hour'){
+    intv <- 3600
+  } else if(freq == 'minute'){
+    intv <- 60
   } else {
-    if(freq == 'day'){
-      intv <- 86400
-    } else if(freq == 'hour'){
-      intv <- 3600
-    } else if(freq == 'minute'){
-      intv <- 60
-    } else {
-      intv <- 1
-    }
-    time.vals <- tnum / intv
-    units <- paste(freq, 's since ', format(since, '%Y-%m-%d %H:%M:%S', tz = tz), sep = '')
+    intv <- 1
   }
-  return(list(vals = time.vals, units = units))
+  time.vals <- tnum / intv
+  units <- paste(freq, 's since ', format(since, '%Y-%m-%d %H:%M:%S', tz = tz), sep = '')
+
+  time.vals <- c(time.vals, units = units)
+  time.vals
 }
 
 #' @rdname nctime
 #' @export
-num2time <- function(time, units) {
+num2time <- function(val, units = NULL) {
+  if(is.null(units))
+    units <- attr(val, 'units')
   units_esm <- strsplit(units, '\\ssince\\s')[[1]]
   freq <- units_esm[1]
   from <- units_esm[2]
 
-  if(freq == 'years' | freq == 'months') {
-    from_date <- strsplit(from, '[-\\/]|\\s')[[1]]
-    stmonth <- as.numeric(from_date[2])
-    styear <- as.numeric(from_date[1])
-
-    if(freq == 'years') {
-      out_years <- styear + time
-      ts <- as.Date(paste(out_years, stmonth, '01', sep='-'))
-    } else {
-      orimonth <- stmonth + (styear-1)*12
-      tmp_months <- orimonth + time
-      out_years <- tmp_months %/% 12 + 1
-      out_months <- (tmp_months-1) %% 12 + 1
-      ts <- as.Date(paste(out_years, out_months, '01', sep='-'))
-    }
-    return(ts)
-  }
-
-  if(freq == 'minutes') {
-    multi <- 60
-  } else if(freq == 'hours') {
-    multi <- 3600
-  } else if(freq == 'days') {
-    multi <- 86400
-  }
-  ts <- as.POSIXct(time * multi, origin = from, tz = "UTC")
-  return(ts)
+  st <- as.POSIXct(from, tz = "GMT")
+  nstep <- switch(freq, days = 86400, hours = 3600, minutes = 60, seconds = 1)
+  if(is.null(nstep)) nstep <- 1
+  st + nstep * val
 }
 
 #' Get dimension values by one line code.
