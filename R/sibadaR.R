@@ -213,10 +213,26 @@ blank.theme <- function() {
 }
 
 # Assistant function for sq.date
+ndaym <- function(d) {
+  y <- as.integer(format(d, '%Y'))
+  m <- as.integer(format(d, '%m'))
+  md <- c(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+  if(m != 2) return(md[m])
+  isleap <- y %% 4 == 0 & y %% 100 != 0 | y %% 400 == 0
+  if(isleap) {
+    return(29)
+  } else {
+    return(28)
+  }
+}
+
+# Assistant function for sq.date
 todate <- function(ori.date, is.end = FALSE) {
   if(is.numeric(ori.date)) ori.date <- as.character(ori.date)
 
-  date.cpns <- strsplit(ori.date, "[-./\\s\\\\]")[[1]] # Split can be "-", ".", "/", "\" and space.
+  date.cpns <- strsplit(ori.date, "[-./\\s\\\\]")[[1]]
+  # Split can be "-", ".", "/", "\" and space.
+
   num.cpns <- length(date.cpns)
 
   if(num.cpns == 1) {
@@ -243,7 +259,7 @@ todate <- function(ori.date, is.end = FALSE) {
     date.start <- as.Date(paste(date.cpns[1], date.cpns[2], '01', sep = '-'))
     if(!is.end)
       return(date.start)
-    return(paste(date.cpns[1], date.cpns[2], days_in_month(date.start), sep = '-'))
+    return(paste(date.cpns[1], date.cpns[2], ndaym(date.start), sep = '-'))
   }
   if(num.cpns == 0)
     stop(sprintf('Error: fromat of date "%s" is incorrect.', ori.date))
@@ -315,6 +331,8 @@ sq.year <- function(from, to = NULL, len = NULL) {
 #' @param p.size Point  size of plot.
 #' @param l.size Line size of plot.
 #' @return Plot or values of UF and UB series from M-K mutation test.
+#'
+#' @import reshape2
 #' @export
 MK_mut_test <- function(x, plot = TRUE, out.value = FALSE, index = NULL, p.size = 3, l.size = 0.6) {
   if(!is.null(dim(x))){
@@ -956,4 +974,29 @@ fitPearson3 <- function(sfs, init = NULL) {
 #' @export
 qplot_grid <- function(x, y, z, ..., data=NULL, facets = NULL) {
   qplot(x, y, ..., fill = z, data = data, facets = facets, geom = 'tile') + coord_quickmap()
+}
+
+
+#' Get the subscript of the dates by providing the start date of the data.
+#'
+#' @description Get the subscript of the dates by providing the start date
+#'              of the data so as to get the subset of the data at the certain
+#'              dates.
+#' @param orist start date of the data. Can be string or string-like integer.
+#' @param st start date of the subset or a series of dates.
+#' @param ed End date of the subset.
+#'
+#' @return A series of subscripts can be used to get the subset of data.
+#'
+#' @export
+find_date <- function(orist, st, ed = st) {
+  ori <- as.integer(as.Date(todate(orist)))
+  if(length(st) > 1) {
+    sts <- sapply(lapply(st, todate), as.Date)
+    return(sts - ori + 1)
+  } else {
+    st <- as.integer(as.Date(todate(st)))
+    ed <- as.integer(as.Date(todate(ed, is.end=TRUE)))
+    return((st-ori):(ed-ori) + 1)
+  }
 }

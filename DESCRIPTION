@@ -20,7 +20,6 @@ LazyData: TRUE
 Imports:
     ggplot2,
     xts,
-    reshape2,
     lubridate,
     ncdf4,
     shape,
@@ -28,6 +27,7 @@ Imports:
     maptools,
     PCICt
 Suggests:
+    reshape2,
     rvest,
     MASS,
     downloader
