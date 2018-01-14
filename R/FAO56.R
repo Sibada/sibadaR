@@ -331,3 +331,53 @@ et0_hg <- function(tmax, tmin, tmean = NULL, Ra = NULL, lat = NULL, dates=NULL) 
   if(is.null(Ra)) Ra <- ext_rad(lat, dates)
   0.0023 * 0.408 * Ra * sqrt(tmax - tmin) * (tmean + 17.8)
 }
+
+
+#' Estimate Incoming longwave radiation.
+#'
+#'
+#' @description Estimate Incoming longwave radiation. Not included in FAO56
+#'              paper but added for convinience.
+#'
+#'
+#' @param temp Near surface air temperature [deg Celsius].
+#'
+#' @param ea Near surface actual vapour pressure [kPa].
+#'
+#' @param s Cloud air emissivity, the ratio between acutal incomming shortwave
+#'          radiation and clear sky incoming shortwave radiation.
+#'
+#' @param method The method to estimate the air emissivity.
+#'         Must be one of 'MAR', 'SWI', 'IJ', 'BRU', 'SAT', and 'KON'.
+#'
+#'
+#' @return Incomming longwave radiation [W /m2].
+#'
+#'
+#' @export
+lw_rad <- function(temp, ea = NULL, s = 1, method = 'MAR') {
+  if(!(method %in% c('MAR', 'SWI', 'IJ', 'BRU', 'SAT', 'KON')))
+    stop("method must be one of 'MAR', 'SWI', 'IJ', 'BRU', 'SAT', and 'KON'.")
+  ea <- ea * 10
+  temp <- temp + 273.15
+  if(method == 'MAR'){
+    ep_ac <- 0.5893 + 5.351e-2 * sqrt(ea*10)
+  }
+  if(method == 'SWI'){
+    ep_ac <- 9.294e-6 * temp*temp
+  }
+  if(method == 'IJ'){
+    ep_ac <- 1 - 0.26 * exp(-7.77e-4 * (273 - temp)**2)
+  }
+  if(method == 'BRU'){
+    ep_ac <- 1.24 * (ea/temp)**(1/7)
+  }
+  if(method == 'SAT'){
+    ep_ac <- 1.08 * exp(-ea ** (temp/2016))
+  }
+  if(method == 'KON'){
+    ep_ac <- 0.23 + 0.848 * (ea/temp)**(1/7)
+  }
+  ep_a <- 1 - s + s*ep_ac
+  ep_a * 5.67e-8 * temp**4
+}

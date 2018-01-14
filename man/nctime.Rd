@@ -6,9 +6,9 @@
 \alias{time2num}
 \title{Convert numbers to time or convert time to numbers in nc format.}
 \usage{
-time2num(time, since = time[1], freq = NULL, tz = "UTC")
+time2num(time, since = time[1], freq = NULL, tz = "GMT")
 
-num2time(time, units)
+num2time(val, units = NULL)
 }
 \arguments{
 \item{time}{R time or date series.}
