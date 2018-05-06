@@ -598,10 +598,10 @@ wt <- function(x, file = "", ...) {
 #'
 #' @export
 get_nh <- function(aurl, dir = "", mustnewdir=FALSE) {
-  if (!requireNamespace("rvest", "downloader", quietly = TRUE)) {
-    stop("rvest and downloader needed. Please install them.",
-         call. = FALSE)
-  }
+  #if (!requireNamespace("rvest", "downloader", quietly = TRUE)) {
+  #  stop("rvest and downloader needed. Please install them.",
+  #       call. = FALSE)
+  #}
 
   lendir = nchar(dir)
   if(dir != "" & substr(dir, lendir, lendir) != "/")

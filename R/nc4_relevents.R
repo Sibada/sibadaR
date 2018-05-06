@@ -156,7 +156,7 @@ ncdim_lat <- function(vals = NULL, from = NULL, csize = NULL, len = NULL, name =
 #' @export
 ncdim_time <- function(time, name = 'time', calendar = 'proleptic_gregorian', ...) {
   ptime <- time2num(time, ...)
-  dim_time <- ncdim_def(name, vals = ptime, units = ptime[['units']], calendar = calendar)
+  dim_time <- ncdim_def(name, vals = ptime, units = attr(ptime, 'units'), calendar = calendar)
   dim_time
 }
 
@@ -445,6 +445,10 @@ read_ncvar <- function(file, var = NULL, from = NULL, to = NULL,
                    size, msize))
 
     val <- ncvar_get(nccon, var, from, getlens)
+    att_val <- ncatt_get(nccon, var)
+    for(attname in names(att_val))
+      attr(val, attname) <- att_val[[attname]]
+
     output$data <- val
   },
   finally = {
