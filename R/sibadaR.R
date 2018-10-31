@@ -973,7 +973,7 @@ fitPearson3 <- function(sfs, init = NULL) {
 #'
 #' @export
 qplot_grid <- function(x, y, z, ..., data=NULL, facets = NULL) {
-  qplot(x, y, ..., fill = z, data = data, facets = facets, geom = 'tile') + coord_quickmap()
+  ggplot2::qplot(x, y, ..., fill = z, data = data, facets = facets, geom = 'tile') + coord_quickmap()
 }
 
 

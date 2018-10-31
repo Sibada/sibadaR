@@ -155,6 +155,7 @@ create_soil_params <- function(coords, elev, soil_hydraulic, anprec, nlayer=3, a
       sprintf(c("EXPT_%d","Ksat_%d","BUBLE%d",
                 "BULKDN%d","WcrFT%d","WpFT%d"), l)
   }
+  soil_hydraulic <- soil_hydraulic[, rep(1:6, each=nlayer) + (1:nlayer*6-6)]
 
   offgmt <- lng / 15
 

@@ -80,7 +80,12 @@ ext_rad <- function(lat, dates) {
 
   dr <- 1 + 0.033 * cos(pi * J/182.5)
   delta <- 0.408 * sin(pi * J/182.5 - 1.39)
-  ws <- acos(-tan(lat) * tan(delta))
+
+  tmpv <- tan(lat) * tan(delta)
+  tmpv[tmpv > 1.] <- 1.
+  tmpv[tmpv < -1.] <- -1.
+
+  ws <- acos(-tmpv)
   Ra <- 118.08 * dr/pi * (ws * sin(lat) * sin(delta) + cos(lat) *
                             cos(delta) * sin(ws))
   Ra
@@ -90,7 +95,8 @@ ext_rad <- function(lat, dates) {
 #'
 #'
 #' @description Estimate daily solar radiation at crop surface [MJ m-2 day-1]
-#'              by providing sunshine duration (SSD) in hours.
+#'              by providing sunshine duration (SSD) in hours or cloud cover
+#'              in fraction.
 #'
 #' @param ssd sunshine duration [hours].
 #'
@@ -101,7 +107,10 @@ ext_rad <- function(lat, dates) {
 #'
 #' @param a Coefficient of the Angstrom formula. Determine the relationship
 #'          between ssd and radiation. Default 0.25.
-#' @param b Coefficient of the Angstrom formula. Default 0.25
+#' @param b Coefficient of the Angstrom formula. Default 0.50.
+#'
+#' @param cld Cloud cover [fraction]. If provided it would be directly used to
+#'            calculate solar radiation rather than SSD and parameter a and b.
 #'
 #' @return Solar radiation at crop surface [MJ m-2 day-1].
 #'
@@ -111,21 +120,27 @@ ext_rad <- function(lat, dates) {
 #'             33(2):109-128.
 #'
 #' @export
-sur_rad <- function(ssd, lat, dates = NULL, a = 0.25, b = 0.5) {
-  lat <- lat * pi/180
+sur_rad <- function(ssd, lat, dates = NULL, a = 0.25, b = 0.5, cld = NULL) {
+  lat <- lat*pi/180
   if (is.null(dates)) {
     J <- rep_len(c(1:365, 1:365, 1:365, 1:366), length(ssd))
   } else {
     J <- as.double(format(dates, '%j'))
   }
 
-  dr <- 1 + 0.033 * cos(pi * J/182.5)
   delta <- 0.408 * sin(pi * J/182.5 - 1.39)
-  ws <- acos(-tan(lat) * tan(delta))
+  tmpv <- tan(lat*pi/180) * tan(delta)
+  tmpv[tmpv > 1.] <- 1.; tmpv[tmpv < -1.] <- -1.
+  ws <- acos(-tmpv)
+
   Ra <- 118.08 * dr/pi * (ws * sin(lat) * sin(delta) + cos(lat) *
-                            cos(delta) * sin(ws))
-  N <- ws * 24/pi
-  Rs <- (a + b * ssd/N) * Ra
+                          cos(delta) * sin(ws))
+  if(!is.null(cld)) {
+    Rs <- (1. - cld) * Ra
+  } else {
+    N <- ws * 24/pi
+    Rs <- (a + b * ssd/N) * Ra
+  }
   Rs
 }
 
@@ -198,21 +213,30 @@ delta_svp <- function(t) {
 #'
 #' @param Rs Incoming shortwave radiation at crop surface [MJ m-2 day-1].
 #'
+#' @param ea Actual vapor pressure [kPa]. Can be estimated by maximum or minimum
+#'           air temperature and mean relative humidity.
+#'
 #' @param Rso Clear sky incoming shortwave radiation, i. e. extraterrestrial
 #'            radiation multiply by clear sky transmissivity (i. e. a + b,
 #'            a and b are coefficients of Angstrom formula. Normally 0.75)
 #'            [MJ m-2 day-1].
 #'
-#' @param ea Actual vapor pressure [kPa]. Can be estimated by maximum or minimum
-#'           air temperature and mean relative humidity.
+#' @param cld Cloud cover [fraction]. If provided it would be directly used to
+#'            calculate net outgoing longwave radiation than Rso.
 #'
 #' @return Net outgoing longwave radiation [MJ m-2 day-1]
 #'
 #' @export
-ol_rad <- function(tmax, tmin, Rs, Rso, ea) {
+ol_rad <- function(tmax, tmin, ea, Rs = NULL, Rso = NULL, cld = NULL) {
+  if((is.null(Rs) || is.null(Rso)) && is.null(cld))
+    stop("Must provide `Rs` and `Rso`, or provide `cld`.")
+  if(is.null(cld)){
+    cld <- 1. - Rs / Rso
+    cld[is.na(cld)] <- 1.
+  }
   (4.093e-9 * (((tmax+273.15)**4 + (tmin+273.15)**4) / 2)) *
     (0.34 - (0.14 * sqrt(ea))) *
-    (1.35 * (Rs / Rso) - 0.35)
+    (1.35 * (1. - cld) - 0.35)
 }
 
 
@@ -224,6 +248,7 @@ ol_rad <- function(tmax, tmin, Rs, Rso, ea) {
 #'              quation (equation 6 in Allen et al. (1998))
 #'
 #' @param Rs Incoming shortwave radiation at crop surface [MJ m-2 day-1].
+#'           Can be calculated by \link{sur_rad}.
 #'
 #' @param tmax Daily maximum air temperature at 2m height [deg Celsius].
 #'
@@ -231,14 +256,13 @@ ol_rad <- function(tmax, tmin, Rs, Rso, ea) {
 #'
 #' @param ws Wind speed [m s-1].
 #'
-#' @param Rso Clear sky incoming shortwave radiation, i. e. extraterrestrial
-#'            radiation multiply by clear sky transmissivity (i. e. a + b,
-#'            a and b are coefficients of Angstrom formula. Normally 0.75)
-#'            [MJ m-2 day-1].
 #' @param G Soil heat flux [MJ m-2 day-1]. Normally set to 0.0 when the time
 #'          steps are less than 10 days. Should be calculated in monthly or
-#'          longer time step. Default 0.0.
+#'          longer time step. Can be calculated using function \link{soil_heat_flux}.
+#'          Default 0.0.
+#'
 #' @param h.ws Height where measure the wind speed [m]. Default 10m.
+#'
 #' @param albedo Albedo of the crop as the proportion of gross incoming solar
 #'               radiation that is reflected by the surface. Default 0.23
 #'               (i. e. the value of the short grass reference crop defined
@@ -265,15 +289,26 @@ ol_rad <- function(tmax, tmin, Rs, Rso, ea) {
 #'
 #' @param pres Air pressure [kPa]. If not provided, must provide z.
 #'
+#' @param cld Cloud cover [fraction]. If provided it would be directly used to
+#'            calculate net outgoing longwave radiation than Rso.
+#'
+#' @param Rso Clear sky incoming shortwave radiation, i. e. extraterrestrial
+#'            radiation multiply by clear sky transmissivity (i. e. a + b + 2E-5*elev[m],
+#'            a + b are coefficients of Angstrom formula. Normally 0.75)
+#'            [MJ m-2 day-1]. Ext. rad. can be calculated by \link{ext_rad}.
+#'            Should be provided if `cld` is not provided.
+#'
 #' @return Reference evapotranspiration ET0 from a hypothetical grass
 #'         reference surface [mm day-1].
 #'
 #'
 #' @export
-et0_pm <- function(Rs, tmax, tmin, ws, Rso, G = 0.0, h.ws = 10.0, albedo = 0.23,
-                   delta = NULL, gamma = NULL, z = NULL, ea = NULL, es = NULL, rhmean = NULL, pres = NULL){
+et0_pm <- function(Rs, tmax, tmin, ws, G = 0.0, h.ws = 10.0, albedo = 0.23,
+                   delta = NULL, gamma = NULL, z = NULL, ea = NULL, es = NULL,
+                   rhmean = NULL, pres = NULL, Rso = NULL, cld = NULL,
+                   tall_crop = FALSE){
 
-  t <- (tmax + tmin) / 2
+  tas <- (tmax + tmin) / 2
   if(is.null(ea))
     if(!is.null(rhmean)) {
       ea <- actual_vp(tmin, tmax, rhmean = rhmean)
@@ -282,19 +317,27 @@ et0_pm <- function(Rs, tmax, tmin, ws, Rso, G = 0.0, h.ws = 10.0, albedo = 0.23,
     }
 
   if(is.null(es)) es <- (vp.temp(tmax) + vp.temp(tmin)) / 2
-  if(is.null(delta)) delta <- delta_svp(t)
+  if(is.null(delta)) delta <- delta_svp(tas)
 
-  Rl <- ol_rad(tmax, tmin, Rs, Rso, ea)
+  Rl <- ol_rad(tmax, tmin, ea, Rs, Rso, cld)
   Rn <- Rs * (1 - albedo) - Rl
   Rn[Rn < 0] <- 0
 
   if(is.null(gamma)) gamma <- cal_gamma(pres, z)
 
+  if(tall_crop) {
+    p1 <- 1600
+    p2 <- 0.38
+  } else {
+    p1 <- 900
+    p2 <- 0.34
+  }
+
   u2 <- ws * (4.87 / log((67.8 * h.ws) - 5.42))
 
   (0.408 * delta * (Rn - G) +
-      gamma * 900 / (t + 273.15) * u2 * (es - ea)) /
-    (delta + (gamma * (1 + 0.34 * ws)))
+      gamma * 900 / (tas + 273.15) * u2 * (es - ea)) /
+    (delta + (gamma * (1 + 0.34 * u2)))
 }
 
 #' Estimate ET0 by Hargreaves equation.
@@ -355,7 +398,7 @@ et0_hg <- function(tmax, tmin, tmean = NULL, Ra = NULL, lat = NULL, dates=NULL) 
 #'
 #'
 #' @export
-lw_rad <- function(temp, ea = NULL, s = 1, method = 'MAR') {
+lw_rad <- function(temp, ea = NULL, s = 1, method = 'KON') {
   if(!(method %in% c('MAR', 'SWI', 'IJ', 'BRU', 'SAT', 'KON')))
     stop("method must be one of 'MAR', 'SWI', 'IJ', 'BRU', 'SAT', and 'KON'.")
   ea <- ea * 10
