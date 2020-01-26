@@ -598,10 +598,11 @@ wt <- function(x, file = "", ...) {
 #'
 #' @export
 get_nh <- function(aurl, dir = "", mustnewdir=FALSE) {
-  #if (!requireNamespace("rvest", "downloader", quietly = TRUE)) {
-  #  stop("rvest and downloader needed. Please install them.",
-  #       call. = FALSE)
-  #}
+  if (!requireNamespace("rvest", "downloader", quietly = TRUE)) {
+    stop("'rvest' and 'downloader' needed. Please install them.",
+         call. = FALSE)
+  }
+  library(rvest)
 
   lendir = nchar(dir)
   if(dir != "" & substr(dir, lendir, lendir) != "/")
@@ -641,7 +642,7 @@ get_nh <- function(aurl, dir = "", mustnewdir=FALSE) {
         ntmp <-  strsplit(pgurl, '/')[[1]]
         pgname <- ntmp[length(ntmp)]
         pg_path <- paste(dir, title, '/', pgname, sep='')
-        download(pgurl, pg_path, mode='wb')
+        downloader::download(pgurl, pg_path, mode='wb')
         print(paste("Saving pg to", pg_path))
 
         getsucceed <- T
